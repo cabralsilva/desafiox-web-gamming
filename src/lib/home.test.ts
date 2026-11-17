@@ -46,7 +46,16 @@ describe("paginação", () => {
 });
 
 describe("lista de desafios", () => {
-  const guest = { q: "", status: null, tickets: null, page: 1, signedIn: false } as const;
+  const guest = {
+    q: "",
+    status: null,
+    tickets: null,
+    page: 1,
+    orderBy: "_id",
+    orderSense: "desc",
+    view: "grid",
+    signedIn: false,
+  } as const;
 
   it("pagina 12 itens e usa os campos do envelope", () => {
     const base = publicChallengePage.items[0];
@@ -56,7 +65,7 @@ describe("lista de desafios", () => {
       name: `Desafio ${index + 1}`,
       slug: `desafio-${index + 1}`,
     }));
-    const page = listChallenges(many, { ...guest, page: 2 });
+    const page = listChallenges(many, { ...guest, page: 2, orderBy: "name", orderSense: "asc" });
     expect(page.paging).toEqual({
       total: 13,
       page: 2,
@@ -68,12 +77,42 @@ describe("lista de desafios", () => {
     expect(page.items.map((item) => item.name)).toEqual(["Desafio 13"]);
   });
 
+  it("ordena pelo campo e pelo sentido da consulta", () => {
+    const byName = listChallenges(publicChallengePage.items, { ...guest, orderBy: "name", orderSense: "asc" });
+    expect(byName.items.map((item) => item.slug)).toEqual([
+      "brasileirao-sobrevivencia",
+      "copa-sobrevivencia",
+      "estadual-sobrevivencia",
+    ]);
+    const byPrize = listChallenges(publicChallengePage.items, {
+      ...guest,
+      orderBy: "budgetAccumulated",
+      orderSense: "asc",
+    });
+    expect(byPrize.items.map((item) => item.slug)).toEqual([
+      "estadual-sobrevivencia",
+      "copa-sobrevivencia",
+      "brasileirao-sobrevivencia",
+    ]);
+  });
+
   it("mantém uma tag por grupo e o segundo clique limpa", () => {
-    const base = { q: "", status: null, tickets: null, page: 3 };
+    const base = {
+      q: "",
+      status: null,
+      tickets: null,
+      page: 3,
+      orderBy: "_id",
+      orderSense: "desc" as const,
+      view: "grid" as const,
+    };
     const selected = challengeHref(base, { status: ChallengeStatus.RUNNING, page: 1 });
     expect(selected).toBe(`/?status=${ChallengeStatus.RUNNING}`);
     const parsed = parseChallengeQuery({ status: ChallengeStatus.RUNNING, page: "1" });
     expect(challengeHref(parsed, { status: null, page: 1 })).toBe("/");
+    expect(challengeHref(base, { orderBy: "name", orderSense: "asc", view: "list", page: 1 })).toBe(
+      "/?orderBy=name&orderSense=asc&view=list",
+    );
     expect(parseChallengeQuery({ status: "DRAFT" }).status).toBeNull();
   });
 

@@ -10,7 +10,6 @@ const AUTO_PLAY_MS = 8000;
 export function HomeBanner({ slides }: { slides: IBannerSlide[] }) {
   const ordered = orderedBannerSlides(slides);
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [reduced, setReduced] = useState(false);
   const count = ordered.length;
@@ -25,12 +24,12 @@ export function HomeBanner({ slides }: { slides: IBannerSlide[] }) {
   }, []);
 
   useEffect(() => {
-    if (count < 2 || paused || hovered || reduced) return;
+    if (count < 2 || hovered || reduced) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % count);
     }, AUTO_PLAY_MS);
     return () => window.clearInterval(timer);
-  }, [count, hovered, paused, reduced]);
+  }, [count, hovered, reduced]);
 
   if (!slide) return null;
 
@@ -39,7 +38,7 @@ export function HomeBanner({ slides }: { slides: IBannerSlide[] }) {
   );
 
   const controlClass =
-    "inline-flex h-11 items-center rounded-md px-3 text-sm font-semibold text-foreground disabled:opacity-40";
+    "absolute bottom-2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-foreground";
 
   return (
     <section
@@ -57,39 +56,40 @@ export function HomeBanner({ slides }: { slides: IBannerSlide[] }) {
         image
       )}
       {count > 1 ? (
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/80 to-transparent px-2">
-          <button type="button" className={controlClass} disabled={index === 0} onClick={() => setIndex((current) => Math.max(0, current - 1))}>
-            Anterior
-          </button>
-          <div className="flex items-center gap-2">
-            {ordered.map((item, itemIndex) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-label={`Mostrar destaque ${itemIndex + 1}`}
-                aria-current={itemIndex === index ? "true" : undefined}
-                className="inline-flex h-11 w-8 items-center justify-center"
-                onClick={() => setIndex(itemIndex)}
-              >
-                <span
-                  className={itemIndex === index ? "h-2.5 w-6 rounded-full bg-primary" : "h-2.5 w-2.5 rounded-full bg-foreground/60"}
-                />
-              </button>
-            ))}
-            <button type="button" className={controlClass} onClick={() => setPaused((current) => !current)}>
-              {paused || reduced ? "Retomar" : "Pausar"}
-            </button>
-          </div>
+        <>
           <button
             type="button"
-            className={controlClass}
-            disabled={index === count - 1}
-            onClick={() => setIndex((current) => Math.min(count - 1, current + 1))}
+            aria-label="Anterior"
+            className={`${controlClass} left-2`}
+            onClick={() => setIndex((current) => (current - 1 + count) % count)}
           >
-            Próximo
+            <BannerChevron direction="prev" />
           </button>
-        </div>
+          <button
+            type="button"
+            aria-label="Próximo"
+            className={`${controlClass} right-2`}
+            onClick={() => setIndex((current) => (current + 1) % count)}
+          >
+            <BannerChevron direction="next" />
+          </button>
+        </>
       ) : null}
     </section>
+  );
+}
+
+function BannerChevron({ direction }: { direction: "prev" | "next" }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-5 w-5">
+      <path
+        d={direction === "prev" ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5"}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

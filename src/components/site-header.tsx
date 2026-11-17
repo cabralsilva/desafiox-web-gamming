@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
 import { orderedBannerSlides } from "@/lib/banner";
 import { formatMoneyBR } from "@/lib/money";
+import { isSectionShell } from "@/lib/section-shell";
 import { cn } from "@/lib/utils";
 import { bannerSlides } from "@/mocks/banner";
 
@@ -32,29 +33,34 @@ const mainNav = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const slides = orderedBannerSlides(pathname === "/" ? bannerSlides : []);
-  const showBanner = slides.length > 0;
+  const slides = orderedBannerSlides(isSectionShell(pathname) ? bannerSlides : []);
+
+  if (slides.length > 0) return <SectionShell slides={slides} />;
 
   return (
     <header className="safe-area-top sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
-      <div
-        className={cn(
-          "mx-auto flex w-full max-w-6xl flex-col px-4",
-          !showBanner && "md:h-16 md:flex-row md:items-center md:gap-6",
-        )}
-      >
-        <div className={cn("flex h-14 items-center justify-between gap-3", !showBanner && "md:contents")}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 md:h-16 md:flex-row md:items-center md:gap-6">
+        <div className="flex h-14 items-center justify-between gap-3 md:contents">
           <Wordmark />
-          <HeaderSession className={cn(!showBanner && "md:order-3")} />
+          <HeaderSession className="md:order-3" />
         </div>
-        {showBanner ? null : <MainNav className="md:order-2 md:flex-1" />}
+        <MainNav className="md:order-2 md:flex-1" />
       </div>
-      {showBanner ? <HomeBanner slides={slides} /> : null}
-      {showBanner ? (
-        <div className="mx-auto w-full max-w-6xl px-4">
-          <MainNav />
-        </div>
-      ) : null}
+    </header>
+  );
+}
+
+function SectionShell({ slides }: { slides: ReturnType<typeof orderedBannerSlides> }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 pt-[max(0.25rem,env(safe-area-inset-top,0px))] backdrop-blur-md">
+      <div className="mx-auto flex h-11 w-full max-w-6xl items-center justify-between gap-3 px-4">
+        <Wordmark />
+        <HeaderSession />
+      </div>
+      <HomeBanner slides={slides} />
+      <div className="mx-auto w-full max-w-6xl px-4">
+        <MainNav />
+      </div>
     </header>
   );
 }
@@ -86,17 +92,17 @@ function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Principal" className={cn("min-w-0 overflow-x-auto", className)}>
-      <ul className="flex w-max items-center gap-1">
+    <nav aria-label="Principal" className={cn("min-w-0", className)}>
+      <ul className="flex w-full items-stretch">
         {mainNav.map((item) => {
           const current = item.isCurrent(pathname);
           return (
-            <li key={item.href}>
+            <li key={item.href} className="flex min-w-0 flex-1">
               <Link
                 href={item.href}
                 aria-current={current ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-11 items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold",
+                  "flex h-11 w-full items-center justify-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold",
                   current ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >

@@ -1,19 +1,25 @@
+import { parseListingControls, sortByField, type ListingControls, type SortField } from "@/lib/listing";
 import { buildPaging, sliceByPaging } from "@/lib/paging";
 import type { IPage } from "@/types/paging";
 import type { IPublicChallengeCard } from "@/types/publicChallenge";
 
 export const CHALLENGE_PAGE_LIMIT = 12;
 
+export const CHALLENGE_SORT_FIELDS: SortField[] = [
+  { value: "_id", label: "Recentes" },
+  { value: "name", label: "Nome" },
+  { value: "budgetAccumulated", label: "Prêmio" },
+  { value: "championship.name", label: "Campeonato" },
+];
+
 const STATUS_FILTERS = ["OPEN_TO_BUY_TICKETS", "RUNNING", "FINISHED"] as const;
 
 export type ChallengeStatusFilter = (typeof STATUS_FILTERS)[number];
 export type ChallengeTicketFilter = "active" | "eliminated";
 
-export type ChallengeListQuery = {
-  q: string;
+export type ChallengeListQuery = ListingControls & {
   status: ChallengeStatusFilter | null;
   tickets: ChallengeTicketFilter | null;
-  page: number;
 };
 
 function first(value: string | string[] | undefined) {
@@ -26,12 +32,10 @@ export function parseChallengeQuery(raw: {
 }): ChallengeListQuery {
   const statusValue = first(raw.status);
   const ticketsValue = first(raw.tickets);
-  const pageNumber = Number(first(raw.page));
   return {
-    q: first(raw.q).trim().slice(0, 80),
+    ...parseListingControls(raw, CHALLENGE_SORT_FIELDS),
     status: STATUS_FILTERS.find((status) => status === statusValue) ?? null,
     tickets: ticketsValue === "active" || ticketsValue === "eliminated" ? ticketsValue : null,
-    page: Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1,
   };
 }
 
@@ -41,6 +45,9 @@ export function challengeHref(query: ChallengeListQuery, patch: Partial<Challeng
   if (next.q) params.set("q", next.q);
   if (next.status) params.set("status", next.status);
   if (next.tickets) params.set("tickets", next.tickets);
+  if (next.orderBy && next.orderBy !== CHALLENGE_SORT_FIELDS[0]?.value) params.set("orderBy", next.orderBy);
+  if (next.orderSense === "asc") params.set("orderSense", "asc");
+  if (next.view === "list") params.set("view", "list");
   if (next.page > 1) params.set("page", String(next.page));
   const search = params.toString();
   return search ? `/?${search}` : "/";
@@ -60,6 +67,7 @@ export function listChallenges(
     if (query.tickets === "active") return (summary?.active ?? 0) > 0;
     return Boolean(summary && summary.total > 0 && summary.active === 0);
   });
-  const paging = buildPaging(filtered.length, query.page, CHALLENGE_PAGE_LIMIT);
-  return { items: sliceByPaging(filtered, paging), paging };
+  const ordered = sortByField(filtered, query.orderBy, query.orderSense);
+  const paging = buildPaging(ordered.length, query.page, CHALLENGE_PAGE_LIMIT);
+  return { items: sliceByPaging(ordered, paging), paging };
 }

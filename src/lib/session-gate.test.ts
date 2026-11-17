@@ -27,6 +27,12 @@ describe("consulta de exemplo", () => {
     expect(params.get("select")).toBe(PUBLIC_CHALLENGE_SELECT);
     expect(params.get("token")).toBeNull();
     expect(params.get("access_token")).toBeNull();
+    expect(params.get("orderBy")).toBe("_id");
+    expect(params.get("orderSense")).toBe("desc");
+    const ordered = publicChallengePath({ page: 1, limit: 1, orderBy: "name", orderSense: "asc" });
+    const orderedParams = new URL(`http://api.test${ordered}`).searchParams;
+    expect(orderedParams.get("orderBy")).toBe("name");
+    expect(orderedParams.get("orderSense")).toBe("asc");
   });
 });
 

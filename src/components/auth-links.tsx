@@ -34,3 +34,20 @@ export function AuthLinks({ className }: { className?: string }) {
     </div>
   );
 }
+
+export function AccountAccessChoices() {
+  return (
+    <div className="mt-6 flex flex-col gap-2">
+      <Button asChild>
+        <Link href="/cadastrar" onClick={() => rememberCurrentIntent()}>
+          Criar conta
+        </Link>
+      </Button>
+      <Button asChild variant="outline">
+        <Link href="/entrar" onClick={() => rememberCurrentIntent()}>
+          Entrar
+        </Link>
+      </Button>
+    </div>
+  );
+}

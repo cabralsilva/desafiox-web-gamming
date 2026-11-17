@@ -1,0 +1,15 @@
+{
+  "name": "desafiox-web-gamming",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "c2-desafiox": "1.0.148",
+    "mongoose": "8.16.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

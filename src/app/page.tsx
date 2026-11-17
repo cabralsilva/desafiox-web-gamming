@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
-import { RoutePlaceholder } from "@/components/route-placeholder";
+import { Suspense } from "react";
+import { ExampleConfirmation } from "@/components/example-confirmation";
 
 export const metadata: Metadata = {
   title: "Desafios",
 };
 
 export default function HomePage() {
-  return <RoutePlaceholder title="Desafios" />;
+  return (
+    <>
+      <h1 className="sr-only">Desafios</h1>
+      <Suspense fallback={null}>
+        <ExampleConfirmation />
+      </Suspense>
+    </>
+  );
 }

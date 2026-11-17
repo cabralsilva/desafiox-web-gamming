@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AuthLinks } from "@/components/auth-links";
+import { useSession } from "@/components/session-provider";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
+import { formatMoneyBR } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
@@ -26,32 +29,36 @@ const mainNav = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const signupCurrent = pathname === "/cadastrar" || pathname.startsWith("/cadastrar/");
-  const entrarCurrent = pathname === "/entrar" || pathname.startsWith("/entrar/");
+  const { signedIn, balance, balanceStatus } = useSession();
+  const accountCurrent = pathname === "/conta" || pathname.startsWith("/conta/");
+  const balanceLabel =
+    balanceStatus === "loading" ? "Saldo…" : balanceStatus === "ready" && balance != null ? formatMoneyBR(balance) : "Saldo";
 
   return (
     <header className="safe-area-top sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-4 md:h-16 md:flex-row md:items-center md:gap-6">
         <div className="flex h-14 items-center justify-between gap-3 md:contents">
           <Wordmark />
-          <div className="flex shrink-0 items-center gap-2 md:order-3">
-            <Button asChild size="sm" variant="default" aria-current={signupCurrent ? "page" : undefined}>
+          {signedIn ? (
+            <div className="flex shrink-0 items-center gap-3 md:order-3">
               <Link
-                href="/cadastrar"
-                className={cn(signupCurrent && "ring-2 ring-ring ring-offset-2 ring-offset-background")}
+                href="/carteira"
+                className="whitespace-nowrap text-sm font-semibold tabular-nums text-highlight hover:underline"
               >
-                Signup
+                {balanceLabel}
               </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" aria-current={entrarCurrent ? "page" : undefined}>
-              <Link
-                href="/entrar"
-                className={cn(entrarCurrent && "ring-2 ring-ring ring-offset-2 ring-offset-background")}
-              >
-                Entrar
-              </Link>
-            </Button>
-          </div>
+              <Button asChild size="sm" variant="outline" aria-current={accountCurrent ? "page" : undefined}>
+                <Link
+                  href="/conta"
+                  className={cn(accountCurrent && "ring-2 ring-ring ring-offset-2 ring-offset-background")}
+                >
+                  Conta
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <AuthLinks className="md:order-3" />
+          )}
         </div>
         <nav aria-label="Principal" className="min-w-0 overflow-x-auto md:order-2 md:flex-1">
           <ul className="flex w-max items-center gap-1">

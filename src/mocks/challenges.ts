@@ -21,14 +21,29 @@ const copa: IPublicChallengeCard = {
   descriptionLong: premiacao,
   pricing: [
     {
-      initDateTime: "2026-06-01T03:00:00.000Z",
-      endDateTime: "2026-06-10T02:59:59.000Z",
-      value: 25,
+      initDateTime: "2026-08-01T03:00:00.000Z",
+      endDateTime: "2026-09-01T02:59:59.000Z",
+      value: 20,
     },
     {
-      initDateTime: "2026-06-10T03:00:00.000Z",
-      endDateTime: "2026-06-20T02:59:59.000Z",
+      initDateTime: "2026-09-01T03:00:00.000Z",
+      endDateTime: "2026-10-01T02:59:59.000Z",
+      value: 30,
+    },
+    {
+      initDateTime: "2026-10-01T03:00:00.000Z",
+      endDateTime: "2026-11-01T02:59:59.000Z",
       value: 40,
+    },
+    {
+      initDateTime: "2026-11-01T03:00:00.000Z",
+      endDateTime: "2026-12-01T02:59:59.000Z",
+      value: 55,
+    },
+    {
+      initDateTime: "2026-12-01T03:00:00.000Z",
+      endDateTime: "2027-01-01T02:59:59.000Z",
+      value: 70,
     },
   ],
   roundStartIndex: 1,

@@ -86,7 +86,7 @@ Não existe coleção de banner, patrocínio ou promoção.
 ## 4. Princípios de produto
 
 1. Visitante vê o jogo inteiro que for público. A barreira aparece na confirmação.
-2. Toda consulta pede só os campos da tela, com `populate` e `select`. Sem payload de admin, sem palpite alheio antes do fechamento da janela, sem PII.
+2. Toda consulta pede só os campos da tela, com `populate` e `select`. Sem payload de admin e sem PII. No quadro de evolução, os cards de palpite seguem RF-38.
 3. Uma tag por grupo de filtro. “Todos” limpa o grupo. Grupos que dependem de sessão somem para o visitante.
 4. Ação bloqueada permanece visível e desabilitada, com Signup/Entrar ao lado, no mesmo diálogo.
 5. Depois do cadastro ou da entrada, a pessoa volta à ação que originou o fluxo (mesmo desafio, mesmo ticket, mesmo diálogo).
@@ -226,9 +226,14 @@ Selecionar de novo a tag ativa limpa o grupo.
 
 **RF-36 Antes de iniciar.** Status `OPEN_TO_BUY_TICKETS`: a página apresenta o desafio no padrão do resumo do app (status, modalidade, campeonato, tipo, descrição curta, janelas, prêmio, intervalo de rodadas) e o botão Comprar tickets, com o mesmo diálogo de RF-25.
 
-**RF-37 Em jogo e encerrado.** Status `RUNNING` ou `FINISHED`: a página segue a evolução do app. Foco na trajetória até o encerramento: rodada atual, janela de palpites quando `roundCurrentStatus` estiver aberta, tickets da conta, kanban das rodadas, sobreviventes e eliminados, e vencedores quando finalizado. Comprar ticket de inscrição não aparece. Compra e proposta de ticket de outro jogador seguem RF-30, nos mesmos pontos em que o app oferece.
+**RF-37 Em jogo e encerrado.** Status `RUNNING` ou `FINISHED`: a página segue a evolução do app. Foco na trajetória até o encerramento: rodada atual, janela de palpites quando `roundCurrentStatus` estiver aberta, tickets da conta, kanban das rodadas, sobreviventes e eliminados, e vencedores quando finalizado. O kanban sempre traz todas as colunas, uma por rodada do desafio, como em `TicketDetail` no app. A coluna existe para cada rodada do intervalo, com ou sem cards, para visitante e para sessão. Comprar ticket de inscrição não aparece. Compra e proposta de ticket de outro jogador seguem RF-30, nos mesmos pontos em que o app oferece.
 
-**RF-38 Palpite.** Na janela aberta, a conta com ticket ativo registra o palpite da rodada no mesmo formato do app (um time ainda não usado, no sobrevivência). Visitante vê que a janela está aberta e o convite para entrar; não vê o palpite ainda editável dos outros. Depois que a rodada fecha, o resultado público da rodada pode aparecer.
+**RF-38 Palpites no kanban.** Os cards de palpite têm a mesma apresentação para visitante e para sessão. O que muda é o endpoint que alimenta a tela e o campo de origem dos cards em cada rodada:
+
+- Visitante: `GET /public/challenge/:id/evaluate`. Os cards saem de `challengeRounds.ticketGuesses` e são listados como o app lista `ticketGuessesOthers`.
+- Sessão: `GET /challenge/:id/evaluate`. Os cards saem de `challengeRounds.ticketGuessesOwner` e `challengeRounds.ticketGuessesOthers`, como no app.
+
+Registrar palpite na janela aberta continua exigindo sessão e ticket ativo, no mesmo formato do app (um time ainda não usado, no sobrevivência).
 
 **RF-39 Regras e compra na evolução.** “Ler regras” continua disponível. Se o status voltar a não representar venda de inscrição, o botão Comprar tickets de inscrição não é exibido.
 
@@ -250,7 +255,7 @@ Selecionar de novo a tag ativa limpa o grupo.
 
 **RNF-04 Consultas enxutas.** Cada tela documenta no cliente a string de `populate` e `select`. É proibido buscar o documento inteiro “por conveniência”. Paginação obrigatória nas listas. A busca não dispara a cada tecla.
 
-**RNF-05 Privacidade.** Resposta de listagem pública não inclui e-mail, telefone, documento, senha, chave Pix, saldo de terceiros nem palpite de rodada ainda aberta. Dono de ticket no mercado é o apelido.
+**RNF-05 Privacidade.** Resposta pública não inclui e-mail, telefone, documento, senha, chave Pix nem saldo de terceiros. No quadro de evolução, visitante e sessão veem os mesmos cards de palpite; a origem desses cards está em RF-38. Dono de ticket no mercado é o apelido.
 
 **RNF-06 Desempenho.** Primeira listagem da home utilizável em rede comum de escritório sem skeleton infinito. Imagens de banner e thumb com tamanho máximo definido e formato moderno. Fonte com `display=swap`.
 
@@ -279,7 +284,7 @@ Nada desta lista se implementa neste repositório. A web só consome o contrato.
 | API-01 | Leitura pública de desafios `PUBLIC` fora de `DRAFT`, com `populate` de campeonato (nome, modalidade) e `select` dos campos do card, paginação, `searchText` e um status | Home anônima |
 | API-02 | Leitura pública de um desafio por `slug` único | URL amigável |
 | API-03 | Contagem ativos/total dos tickets da sessão por desafio, só com sessão | Card logado |
-| API-04 | Leitura pública do quadro de evolução sem palpites de janela aberta; com sessão, inclui os tickets e palpites da própria conta | Tela de evolução |
+| API-04 | Quadro de evolução com uma coluna por rodada do desafio. Visitante lê `ticketGuesses` e lista esses cards como o app lista `ticketGuessesOthers`. Sessão lê `ticketGuessesOwner` e `ticketGuessesOthers`, como o app. A apresentação dos cards é a mesma | Tela de evolução |
 | API-05 | Listagem pública de tickets de mercado (campos do card, apelido do dono, flag de negociação sem detalhe alheio), com os filtros de RF-28 | Mercado anônimo |
 | API-06 | Entrada por e-mail ou pelo WhatsApp único (`phone`) e senha. O array `phones` será removido e os cadastros atuais migrados para um telefone | RF-16 |
 | API-07 | WhatsApp obrigatório no complemento Google, envio de código, confirmação e reenvio, estado pendente na conta | RF-13 e RF-15 |
@@ -291,14 +296,14 @@ Nada desta lista se implementa neste repositório. A web só consome o contrato.
 
 - Card de desafio: `name`, `slug`, `status`, `type`, `budgetAccumulated`, `pricing`, `descriptionLong`, `roundStartIndex`, `roundEndIndex`, `championship.name`, `championship.modality`.
 - Card de mercado: `code`, `saleAuthorized`, `marketValue.value`, `account.nickName`, `challenge.name`, `challenge.slug`, `challenge.budgetAccumulated`, `challenge.roundCurrentIndex`, `challenge.roundEndIndex`, `challenge.championship.name`, e um booleano `inNegotiation` calculado na API.
-- Evolução autenticada: o conjunto que o kanban do app já pede, restrito ao dono quando o campo for palpite ou ticket da conta.
+- Evolução: uma coluna por item de `challengeRounds`. Visitante, em `GET /public/challenge/:id/evaluate`: `challengeRounds.ticketGuesses`, com os campos que o app usa em `ticketGuessesOthers`. Sessão, em `GET /challenge/:id/evaluate`: `challengeRounds.ticketGuessesOwner` e `challengeRounds.ticketGuessesOthers`, o conjunto que o kanban do app já pede.
 
 ## 9. Decisões fechadas e lacunas
 
 ### Fechadas
 
 - **WhatsApp pendente.** A pessoa navega, vê a própria carteira e os próprios tickets. Comprar, propor, depositar, sacar e palpitar esperam o código confirmado (RF-18).
-- **Evolução.** A primeira versão entrega o ciclo completo que o app já tem: kanban, palpite, compra de inscrição e negociação de ticket. Não há bolão de placar no produto.
+- **Evolução.** A primeira versão entrega o ciclo completo que o app já tem: kanban, palpite, compra de inscrição e negociação de ticket. Não há bolão de placar no produto. O kanban sempre mostra uma coluna por rodada do desafio. Visitante e sessão veem os mesmos cards de palpite. O visitante lê `ticketGuesses` (listados como `ticketGuessesOthers`); a sessão lê `ticketGuessesOwner` e `ticketGuessesOthers`.
 - **Banner.** Lista estática no front na primeira entrega, componente pronto para a API depois (RF-03). A lista vive em `src/mocks/banner.ts`.
 - **Stack.** Next.js na Vercel. Rotas públicas (`/`, `/mercado`, `/desafios/:slug` e institucionais) montadas no servidor. Diálogos, sessão e ações da conta no cliente. Visual alinhado ao app (React, TypeScript, Tailwind, shadcn). A Vercel executa esse servidor sem máquina própria (RNF-08).
 - **Telefone único.** `phones[]` será descontinuado. A conta tem um `phone` (WhatsApp), identificador de entrada junto com o e-mail. Cadastros existentes serão migrados para esse campo (RF-12, RF-16).

@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/api";
 import { formatMoneyBR } from "@/lib/money";
 import { evaluateChallengePath } from "@/lib/queries/evaluateChallenge";
-import { normalizeEvolution, type EvolutionRoundView, type EvolutionView } from "@/lib/queries/evolutionView";
+import { EvolutionKanban } from "@/components/evolution-kanban";
+import { MakeGuessDialog } from "@/components/make-guess-dialog";
+import { normalizeEvolution, type EvolutionGuessView, type EvolutionRoundView, type EvolutionView } from "@/lib/queries/evolutionView";
 import { cn } from "@/lib/utils";
 
 const MODALITY_LABEL: Record<string, string> = {
@@ -25,19 +27,6 @@ const STATUS_LABEL: Record<string, string> = {
   FINISHED: "Finalizado",
 };
 
-const ROUND_LABEL: Record<string, string> = {
-  OPEN_TO_GUESS: "Janela aberta",
-  FINISHED: "Encerrada",
-  SCHEDULED: "Prevista",
-  IN_PROGRESS: "Em jogo",
-};
-
-const GUESS_LABEL: Record<string, string> = {
-  PENDING: "Pendente",
-  CLASSIFIELDED: "Classificado",
-  ELIMINATED: "Eliminado",
-};
-
 export function ChallengeEvolution({
   initial,
   sessionFallback,
@@ -51,6 +40,7 @@ export function ChallengeEvolution({
   const [view, setView] = useState(initial);
   const [buyOpen, setBuyOpen] = useState(Boolean(ticketOrderId));
   const [pendingOrderId, setPendingOrderId] = useState(ticketOrderId || null);
+  const [guessTarget, setGuessTarget] = useState<{ guess: EvolutionGuessView; round: EvolutionRoundView } | null>(null);
 
   useEffect(() => {
     const stored = ticketOrderId || readPendingTicketOrder() || "";
@@ -74,7 +64,7 @@ export function ChallengeEvolution({
           return;
         }
         const next = normalizeEvolution(await response.json(), { signedIn: true });
-        if (!cancelled) setView(next ?? sessionFallback ?? initial);
+        if (!cancelled && next) setView(next);
       })
       .catch(() => {
         if (!cancelled && sessionFallback) setView(sessionFallback);
@@ -84,7 +74,8 @@ export function ChallengeEvolution({
     };
   }, [signedIn, initial, sessionFallback]);
 
-  const { challenge, rounds, winners } = view;
+  const { challenge, rounds, winners, winnerTicketIds } = view;
+  const showKanban = challenge.status === "RUNNING" || challenge.status === "FINISHED";
   const openToBuy = challenge.status === "OPEN_TO_BUY_TICKETS";
   const guessOpen = challenge.status === "RUNNING" && challenge.roundCurrentStatus === "OPEN_TO_GUESS";
 
@@ -135,6 +126,18 @@ export function ChallengeEvolution({
         ) : null}
       </header>
 
+      {showKanban && rounds.length > 0 ? (
+        <EvolutionKanban
+          rounds={rounds}
+          currentRound={challenge.roundCurrentIndex}
+          winnerTicketIds={winnerTicketIds}
+          signedIn={signedIn}
+          onMakeGuess={(guess, round) => {
+            if (signedIn) setGuessTarget({ guess, round });
+          }}
+        />
+      ) : null}
+
       {winners.length > 0 ? (
         <section>
           <h2 className="text-lg font-black">Vencedores</h2>
@@ -149,17 +152,30 @@ export function ChallengeEvolution({
         </section>
       ) : null}
 
-      {rounds.length > 0 ? (
-        <section>
-          <h2 className="text-lg font-black">Rodadas</h2>
-          <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {rounds.map((round) => (
-              <RoundColumn key={round.id} round={round} />
-            ))}
-          </div>
-        </section>
+      {guessTarget ? (
+        <MakeGuessDialog
+          open
+          signedIn={signedIn}
+          challengeId={challenge._id}
+          ticketGuessId={guessTarget.guess.id}
+          challengeRoundId={guessTarget.round.id}
+          ticketId={guessTarget.guess.ticketId}
+          ticketCode={guessTarget.guess.ticketCode}
+          roundNumber={guessTarget.round.sequenceOrder}
+          onOpenChange={(next) => {
+            if (!next) setGuessTarget(null);
+          }}
+          onConfirmed={() => {
+            void apiRequest(evaluateChallengePath(challenge.slug, true), { auth: true })
+              .then(async (response) => {
+                if (!response.ok) return;
+                const next = normalizeEvolution(await response.json(), { signedIn: true });
+                if (next) setView(next);
+              })
+              .catch(() => undefined);
+          }}
+        />
       ) : null}
-
       <BuyTicketsDialog
         challenge={challenge}
         open={buyOpen}
@@ -173,27 +189,3 @@ export function ChallengeEvolution({
   );
 }
 
-function RoundColumn({ round }: { round: EvolutionRoundView }) {
-  return (
-    <article className="w-64 shrink-0 rounded-lg border border-border bg-card p-4">
-      <h3 className="font-bold">{round.label}</h3>
-      <p className="text-xs text-muted-foreground">{ROUND_LABEL[round.status] ?? round.status}</p>
-      {round.guesses.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          {round.status === "OPEN_TO_GUESS" ? "Palpites desta janela ficam só com quem está na conta." : "Sem palpites nesta rodada."}
-        </p>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {round.guesses.map((guess) => (
-            <li key={guess.id} className="rounded-md border border-border px-3 py-2 text-sm">
-              <p className="font-semibold">{guess.own ? "Seu ticket" : guess.nickName}</p>
-              <p className="text-muted-foreground">{guess.ticketCode}</p>
-              <p>{guess.teamName ?? "Ainda sem palpite"}</p>
-              <p className="text-xs text-muted-foreground">{GUESS_LABEL[guess.guessStatus] ?? guess.guessStatus}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </article>
-  );
-}

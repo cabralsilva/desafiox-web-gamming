@@ -21,7 +21,7 @@ describe("evolução", () => {
     expect(new URL(`http://api.test${guest}`).searchParams.get("populate")).toBe("championship");
   });
 
-  it("esconde palpites da janela aberta para o visitante e mantém o da conta", () => {
+  it("lista os palpites do visitante como os outros e separa os da conta", () => {
     const payload = {
       _id: "1",
       name: "Brasileirão sobrevivência",
@@ -70,9 +70,12 @@ describe("evolução", () => {
     const member = normalizeEvolution(payload, { signedIn: true });
     const guestOpen = guest?.rounds.find((round) => round.status === "OPEN_TO_GUESS");
     const memberOpen = member?.rounds.find((round) => round.status === "OPEN_TO_GUESS");
-    expect(guestOpen?.guesses).toEqual([]);
-    expect(memberOpen?.guesses.map((guess) => guess.ticketCode)).toEqual(["BX-1101"]);
-    expect(guest?.rounds[0]?.guesses).toHaveLength(1);
+    expect(guestOpen?.owners).toEqual([]);
+    expect(guestOpen?.others.map((guess) => guess.ticketCode)).toEqual(["BX-9"]);
+    expect(guestOpen?.others.every((guess) => guess.own === false)).toBe(true);
+    expect(memberOpen?.owners.map((guess) => guess.ticketCode)).toEqual(["BX-1101"]);
+    expect(memberOpen?.others).toEqual([]);
+    expect(guest?.rounds[0]?.others).toHaveLength(1);
   });
 });
 

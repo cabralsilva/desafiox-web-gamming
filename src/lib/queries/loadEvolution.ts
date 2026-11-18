@@ -2,7 +2,7 @@ import { apiRequest } from "@/lib/api";
 import { evaluateChallengePath } from "@/lib/queries/evaluateChallenge";
 import { evolutionPayloadFromFixture, normalizeEvolution, type EvolutionView } from "@/lib/queries/evolutionView";
 import { publicChallengeBySlug, sessionChallengePage } from "@/mocks/challenges";
-import { publicEvolution, sessionEvolution } from "@/mocks/evolution";
+import { finishedEvolution, publicEvolution, sessionEvolution, sessionFinishedEvolution } from "@/mocks/evolution";
 
 export async function loadPublicEvolution(slug: string): Promise<EvolutionView | null> {
   const live = await loadLiveEvolution(slug, false);
@@ -26,13 +26,22 @@ async function loadLiveEvolution(slug: string, signedIn: boolean): Promise<Evolu
 }
 
 function fixtureEvolution(slug: string, signedIn: boolean): EvolutionView | null {
-  const source = signedIn ? sessionEvolution : publicEvolution;
-  if (source.challenge.slug === slug) {
-    return normalizeEvolution(evolutionPayloadFromFixture(source, signedIn), { signedIn });
+  const source =
+    slug === publicEvolution.challenge.slug
+      ? signedIn
+        ? sessionEvolution
+        : publicEvolution
+      : slug === finishedEvolution.challenge.slug
+        ? signedIn
+          ? sessionFinishedEvolution
+          : finishedEvolution
+        : null;
+  if (source) {
+    return normalizeEvolution(evolutionPayloadFromFixture(source), { signedIn });
   }
   const card = signedIn
     ? sessionChallengePage.items.find((item) => item.slug === slug)
     : publicChallengeBySlug[slug];
   if (!card) return null;
-  return { challenge: card, rounds: [], winners: [] };
+  return { challenge: card, rounds: [], winnerTicketIds: [], winners: [] };
 }

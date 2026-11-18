@@ -3,11 +3,15 @@ import type { IPublicChallengeCard } from "@/types/publicChallenge";
 
 export interface EvolutionGuessView {
   id: string;
+  ticketId: string;
   nickName: string;
   ticketCode: string;
   teamName: string | null;
   guessStatus: string;
   ticketStatus: string;
+  points: number | null;
+  ticketPoints: number | null;
+  automatic: boolean;
   own: boolean;
 }
 
@@ -16,26 +20,37 @@ export interface EvolutionRoundView {
   status: string;
   sequenceOrder: number;
   label: string;
-  guesses: EvolutionGuessView[];
+  owners: EvolutionGuessView[];
+  others: EvolutionGuessView[];
 }
 
 export interface EvolutionView {
   challenge: IPublicChallengeCard;
   rounds: EvolutionRoundView[];
+  winnerTicketIds: string[];
   winners: { nickName: string; ticketCode: string }[];
 }
 
-export function evolutionPayloadFromFixture(source: IPublicEvolution, owner: boolean) {
+const REVEALED_ROUND = new Set(["FINISHED", "IN_HOMOLOGATION", "CLOSED_TO_GUESS"]);
+
+/** Time visível no card. Dono sempre vê o próprio; os demais seguem o app em `ticketGuessesOthers`. */
+export function showsGuessTeam(own: boolean, roundStatus: string) {
+  if (own) return true;
+  return REVEALED_ROUND.has(roundStatus);
+}
+
+export function evolutionPayloadFromFixture(source: IPublicEvolution) {
   return {
     ...source.challenge,
+    ticketsWinners: source.winnerTicketIds ?? [],
     challengeRounds: source.rounds.map((round) => ({
       _id: round._id,
       status: round.status,
       sequenceOrder: round.sequenceOrder,
       label: round.label,
-      ...(owner
-        ? { ticketGuessesOwner: round.guesses, ticketGuessesOthers: [] }
-        : { ticketGuesses: round.guesses }),
+      ticketGuesses: round.others,
+      ticketGuessesOwner: round.owners,
+      ticketGuessesOthers: round.others,
     })),
   };
 }
@@ -49,11 +64,6 @@ export function normalizeEvolution(payload: unknown, options: { signedIn: boolea
   if (!name || !slug || !status) return null;
 
   const championship = record(root.championship);
-  const rounds = list(root.challengeRounds)
-    .map((round, index) => normalizeRound(round, index, options.signedIn))
-    .filter((round): round is EvolutionRoundView => round != null)
-    .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-
   const challenge: IPublicChallengeCard = {
     _id: text(root._id) || slug,
     name,
@@ -82,10 +92,20 @@ export function normalizeEvolution(payload: unknown, options: { signedIn: boolea
     },
   };
 
+  const rounds = fillRounds(
+    list(root.challengeRounds)
+      .map((round, index) => normalizeRound(round, index, options.signedIn))
+      .filter((round): round is EvolutionRoundView => round != null)
+      .sort((a, b) => a.sequenceOrder - b.sequenceOrder),
+    challenge,
+  );
+  const winnerTicketIds = idsOf(root.ticketsWinners);
+
   return {
     challenge,
     rounds,
-    winners: status === "FINISHED" ? winnersFrom(rounds) : [],
+    winnerTicketIds,
+    winners: status === "FINISHED" ? winnersFrom(rounds, winnerTicketIds) : [],
   };
 }
 
@@ -93,35 +113,25 @@ function normalizeRound(value: unknown, index: number, signedIn: boolean): Evolu
   const round = record(value);
   if (!round) return null;
   const status = text(round.status) || "SCHEDULED";
-  const open = status === "OPEN_TO_GUESS";
   const sequenceOrder = numberValue(round.sequenceOrder) || index + 1;
-  const owners = signedIn
-    ? list(round.ticketGuessesOwner).flatMap((guess) => {
-        const view = normalizeGuess(guess, true);
-        return view ? [view] : [];
-      })
-    : [];
-  const others = open
-    ? []
-    : list(round.ticketGuessesOthers).flatMap((guess) => {
-        const view = normalizeGuess(guess, false);
-        return view ? [view] : [];
-      });
-  const publicGuesses = open
-    ? []
-    : list(round.ticketGuesses).flatMap((guess) => {
-        const view = normalizeGuess(guess, false);
-        return view ? [view] : [];
-      });
-  const guesses = signedIn && round.ticketGuessesOwner != null ? [...owners, ...others] : publicGuesses;
+  const owners = signedIn ? mapGuesses(round.ticketGuessesOwner, true) : [];
+  const others = signedIn ? mapGuesses(round.ticketGuessesOthers, false) : mapGuesses(round.ticketGuesses, false);
 
   return {
     id: text(round._id) || `rodada-${sequenceOrder}`,
     status,
     sequenceOrder,
     label: text(round.label) || `Rodada ${sequenceOrder}`,
-    guesses,
+    owners,
+    others,
   };
+}
+
+function mapGuesses(value: unknown, own: boolean) {
+  return list(value).flatMap((guess) => {
+    const view = normalizeGuess(guess, own);
+    return view ? [view] : [];
+  });
 }
 
 function normalizeGuess(value: unknown, own: boolean): EvolutionGuessView | null {
@@ -134,21 +144,67 @@ function normalizeGuess(value: unknown, own: boolean): EvolutionGuessView | null
   if (!ticketCode) return null;
   return {
     id: text(guess._id) || ticketCode,
+    ticketId: text(ticket?._id),
     nickName: text(account?.nickName) || "Jogador",
     ticketCode,
     teamName: text(team?.name) || null,
     guessStatus: text(guess.guessStatus) || "PENDING",
     ticketStatus: text(ticket?.statusInGamming),
+    points: optionalNumber(guess.points),
+    ticketPoints: optionalNumber(ticket?.points),
+    automatic: guess.isAutomatic === true,
     own,
   };
 }
 
-function winnersFrom(rounds: EvolutionRoundView[]) {
-  const last = rounds[rounds.length - 1];
-  if (!last) return [];
-  return last.guesses
-    .filter((guess) => guess.guessStatus === "CLASSIFIELDED" || guess.ticketStatus === "SCALLING")
-    .map((guess) => ({ nickName: guess.nickName, ticketCode: guess.ticketCode }));
+function fillRounds(rounds: EvolutionRoundView[], challenge: IPublicChallengeCard) {
+  const start = challenge.roundStartIndex;
+  const end = challenge.roundEndIndex;
+  if (!start || !end || end < start || end - start > 64) return rounds;
+  const byOrder = new Map(rounds.map((round) => [round.sequenceOrder, round]));
+  const filled: EvolutionRoundView[] = [];
+  for (let order = start; order <= end; order += 1) {
+    filled.push(byOrder.get(order) ?? emptyRound(order, challenge));
+  }
+  return filled;
+}
+
+function emptyRound(order: number, challenge: IPublicChallengeCard): EvolutionRoundView {
+  let status = "SCHEDULED";
+  if (challenge.roundCurrentIndex && order < challenge.roundCurrentIndex) status = "FINISHED";
+  else if (order === challenge.roundCurrentIndex) status = challenge.roundCurrentStatus || "SCHEDULED";
+  return {
+    id: `rodada-${order}`,
+    status,
+    sequenceOrder: order,
+    label: `Rodada ${order}`,
+    owners: [],
+    others: [],
+  };
+}
+
+function winnersFrom(rounds: EvolutionRoundView[], winnerTicketIds: string[]) {
+  const marked = new Set(winnerTicketIds);
+  const guesses = rounds.flatMap((round) => [...round.owners, ...round.others]);
+  const picked = marked.size
+    ? guesses.filter((guess) => marked.has(guess.ticketId))
+    : (rounds[rounds.length - 1]?.owners ?? []).concat(rounds[rounds.length - 1]?.others ?? []).filter(
+        (guess) => guess.guessStatus === "CLASSIFIELDED" || guess.ticketStatus === "SCALLING",
+      );
+  const seen = new Set<string>();
+  return picked.flatMap((guess) => {
+    if (seen.has(guess.ticketCode)) return [];
+    seen.add(guess.ticketCode);
+    return [{ nickName: guess.nickName, ticketCode: guess.ticketCode }];
+  });
+}
+
+function idsOf(value: unknown) {
+  return list(value).flatMap((item) => {
+    if (typeof item === "string" && item) return [item];
+    const id = text(record(item)?._id);
+    return id ? [id] : [];
+  });
 }
 
 function unwrap(payload: unknown): Record<string, unknown> | null {
@@ -177,4 +233,8 @@ function text(value: unknown): string {
 
 function numberValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function optionalNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BuyTicketsDialog, clearPendingTicketOrder, readPendingTicketOrder } from "@/components/buy-tickets-dialog";
+import { ChevronLeftIcon } from "@/components/icons";
 import { useSession } from "@/components/session-provider";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/api";
@@ -89,10 +90,16 @@ export function ChallengeEvolution({
 
   return (
     <div className="space-y-6">
-      <Link href="/" className="inline-flex text-sm font-semibold text-muted-foreground hover:text-foreground">
-        Voltar aos desafios
-      </Link>
       <header className="rounded-lg border border-border bg-card p-5">
+        <p>
+          <Link
+            href="/"
+            aria-label="Voltar aos desafios"
+            className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeftIcon className="h-5 w-5" /> Voltar
+          </Link>
+        </p>
         <p className={cn("text-xs font-semibold", challenge.status === "RUNNING" ? "text-highlight" : "text-muted-foreground")}>
           {STATUS_LABEL[challenge.status] ?? challenge.status}
         </p>

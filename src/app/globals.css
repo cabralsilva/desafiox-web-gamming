@@ -73,3 +73,11 @@
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
   }
 }
+
+.dx-from-right {
+  transform: translateX(100%);
+}
+
+.dx-from-left {
+  transform: translateX(-100%);
+}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { orderedBannerSlides } from "@/lib/banner";
 import type { IBannerSlide } from "@/types/banner";
 
@@ -63,7 +64,7 @@ export function HomeBanner({ slides }: { slides: IBannerSlide[] }) {
             className={`${controlClass} left-2`}
             onClick={() => setIndex((current) => (current - 1 + count) % count)}
           >
-            <BannerChevron direction="prev" />
+            <ChevronLeftIcon className="h-5 w-5" />
           </button>
           <button
             type="button"
@@ -71,25 +72,10 @@ export function HomeBanner({ slides }: { slides: IBannerSlide[] }) {
             className={`${controlClass} right-2`}
             onClick={() => setIndex((current) => (current + 1) % count)}
           >
-            <BannerChevron direction="next" />
+            <ChevronRightIcon className="h-5 w-5" />
           </button>
         </>
       ) : null}
     </section>
-  );
-}
-
-function BannerChevron({ direction }: { direction: "prev" | "next" }) {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-5 w-5">
-      <path
-        d={direction === "prev" ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }

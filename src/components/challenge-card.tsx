@@ -31,10 +31,12 @@ export function ChallengeCard({
   challenge,
   signedIn,
   onReadRules,
+  onBuy,
 }: {
   challenge: IPublicChallengeCard;
   signedIn: boolean;
   onReadRules: () => void;
+  onBuy: () => void;
 }) {
   const notStarted = challenge.status === "OPEN_TO_BUY_TICKETS";
 
@@ -69,6 +71,7 @@ export function ChallengeCard({
                   : "none"
           }
           marketHref={`/mercado?q=${encodeURIComponent(challenge.name)}`}
+          onBuy={onBuy}
         />
         {signedIn && challenge.myTickets ? (
           <p className="mt-2 text-xs font-semibold">
@@ -166,10 +169,12 @@ function PricingTimeline({
   windows,
   action,
   marketHref,
+  onBuy,
 }: {
   windows: IPublicChallengeCard["pricing"];
   action: "buy" | "market" | "closed" | "none";
   marketHref: string;
+  onBuy: () => void;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLLIElement>(null);
@@ -238,7 +243,7 @@ function PricingTimeline({
                 <span className="mb-2 min-h-4 text-[11px] text-muted-foreground">Até {formatDateBR(window.endDateTime)}</span>
                 <TimelineNode emphasized={index <= focusStepIndex} connect={index < stepCount - 1} activeLine={past} />
                 {buyHere ? (
-                  <button type="button" className={timelineActionClass}>
+                  <button type="button" className={timelineActionClass} onClick={onBuy}>
                     {formatMoneyBR(window.value)} Comprar
                   </button>
                 ) : (

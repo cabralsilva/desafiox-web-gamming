@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FilterTags, type FilterGroupItem } from "@/components/filter-tags";
+import { ArrowDownIcon, ArrowUpIcon, SearchIcon } from "@/components/icons";
 import { Pagination } from "@/components/pagination";
 import type { ListingControls, SortField } from "@/lib/listing";
 import { cn } from "@/lib/utils";
@@ -93,7 +94,7 @@ function ListingSearch<Query extends ListingControls>({
   return (
     <div className="relative min-w-0 flex-1 basis-48">
       <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-        <SearchGlass />
+        <SearchIcon className="h-3.5 w-3.5" />
       </span>
       <input
         type="search"
@@ -104,15 +105,6 @@ function ListingSearch<Query extends ListingControls>({
         className="h-11 w-full rounded-md border border-input bg-card py-0 pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-search-decoration]:hidden"
       />
     </div>
-  );
-}
-
-function SearchGlass() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5">
-      <circle cx="6.75" cy="6.75" r="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M10 10.25 13.25 13.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
   );
 }
 
@@ -185,10 +177,10 @@ function SortControls<Query extends ListingControls>({
       </div>
       <div role="group" aria-label="Sentido da ordenação" className="flex min-w-0 flex-1 overflow-hidden rounded-md border border-border md:flex-none">
         <SortSenseLink href={hrefFor({ orderSense: "asc", page: 1 } as Partial<Query>)} pressed={query.orderSense === "asc"} label="Crescente">
-          <SortArrow direction="asc" />
+          <ArrowUpIcon />
         </SortSenseLink>
         <SortSenseLink href={hrefFor({ orderSense: "desc", page: 1 } as Partial<Query>)} pressed={query.orderSense === "desc"} label="Decrescente">
-          <SortArrow direction="desc" />
+          <ArrowDownIcon />
         </SortSenseLink>
       </div>
     </div>
@@ -220,31 +212,5 @@ function SortSenseLink({
       {children}
       <span className="whitespace-nowrap">{label}</span>
     </Link>
-  );
-}
-
-function SortArrow({ direction }: { direction: "asc" | "desc" }) {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4">
-      {direction === "asc" ? (
-        <path
-          d="M8 13V3M8 3 4 7M8 3l4 4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ) : (
-        <path
-          d="M8 3v10M8 13 4 9M8 13l4-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
-    </svg>
   );
 }

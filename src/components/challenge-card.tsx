@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
+import { ChevronsRightIcon, ScrollHintIcon } from "@/components/icons";
 import { formatDateBR, isCurrentPricingWindow } from "@/lib/dates";
 import { formatMoneyBR } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -31,10 +32,12 @@ export function ChallengeCard({
   challenge,
   signedIn,
   onReadRules,
+  onBuy,
 }: {
   challenge: IPublicChallengeCard;
   signedIn: boolean;
   onReadRules: () => void;
+  onBuy: () => void;
 }) {
   const notStarted = challenge.status === "OPEN_TO_BUY_TICKETS";
 
@@ -69,6 +72,7 @@ export function ChallengeCard({
                   : "none"
           }
           marketHref={`/mercado?q=${encodeURIComponent(challenge.name)}`}
+          onBuy={onBuy}
         />
         {signedIn && challenge.myTickets ? (
           <p className="mt-2 text-xs font-semibold">
@@ -96,7 +100,7 @@ export function ChallengeCard({
           )}
         >
           Ver evolução
-          <NavArrows />
+          <ChevronsRightIcon className="h-4 w-5" />
         </Link>
       </footer>
     </article>
@@ -108,21 +112,6 @@ const footerActionClass =
 
 function FooterCell({ children }: { children: ReactNode }) {
   return <div className={footerActionClass}>{children}</div>;
-}
-
-function NavArrows() {
-  return (
-    <svg viewBox="0 0 20 16" aria-hidden="true" className="h-4 w-5 shrink-0">
-      <path
-        d="M2 3.5 7 8l-5 4.5M10 3.5 15 8l-5 4.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 const timelineActionClass =
@@ -166,10 +155,12 @@ function PricingTimeline({
   windows,
   action,
   marketHref,
+  onBuy,
 }: {
   windows: IPublicChallengeCard["pricing"];
   action: "buy" | "market" | "closed" | "none";
   marketHref: string;
+  onBuy: () => void;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLLIElement>(null);
@@ -206,16 +197,7 @@ function PricingTimeline({
   return (
     <div className="relative mt-4 -mx-5 bg-muted/50">
       <div className="pointer-events-none flex justify-center pt-2" aria-hidden="true">
-        <svg viewBox="0 0 28 10" className="h-1.5 w-4 text-muted-foreground/80">
-          <path
-            d="M7 1 2 5l5 4M21 1l5 4-5 4M3 5h22"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ScrollHintIcon className="h-1.5 w-4 text-muted-foreground/80" />
       </div>
       <div
         ref={scrollerRef}
@@ -238,7 +220,7 @@ function PricingTimeline({
                 <span className="mb-2 min-h-4 text-[11px] text-muted-foreground">Até {formatDateBR(window.endDateTime)}</span>
                 <TimelineNode emphasized={index <= focusStepIndex} connect={index < stepCount - 1} activeLine={past} />
                 {buyHere ? (
-                  <button type="button" className={timelineActionClass}>
+                  <button type="button" className={timelineActionClass} onClick={onBuy}>
                     {formatMoneyBR(window.value)} Comprar
                   </button>
                 ) : (

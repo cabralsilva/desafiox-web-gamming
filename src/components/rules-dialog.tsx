@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { CloseIcon } from "@/components/icons";
 import { sanitizeRulesHtml } from "@/lib/sanitize-html";
 
 export function RulesDialog({
@@ -43,15 +44,7 @@ export function RulesDialog({
           className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={onClose}
         >
-          <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4">
-            <path
-              d="M3.2 3.2 12.8 12.8M12.8 3.2 3.2 12.8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-            />
-          </svg>
+          <CloseIcon />
         </button>
       </div>
       {safeHtml ? (

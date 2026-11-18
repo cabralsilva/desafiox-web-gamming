@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BuyTicketsDialog } from "@/components/buy-tickets-dialog";
 import { ChallengeCard } from "@/components/challenge-card";
 import { type FilterGroupItem } from "@/components/filter-tags";
 import { ResourceList } from "@/components/resource-list";
@@ -39,6 +40,7 @@ export function ChallengeHome({
   const source = signedIn ? sessionItems : publicItems;
   const result = listChallenges(source, { ...query, signedIn });
   const [rules, setRules] = useState<IPublicChallengeCard | null>(null);
+  const [buying, setBuying] = useState<IPublicChallengeCard | null>(null);
   const hasFilter = Boolean(query.q || query.status || (signedIn && query.tickets));
 
   return (
@@ -48,7 +50,12 @@ export function ChallengeHome({
         paging={result.paging}
         getKey={(challenge) => challenge._id}
         renderCard={(challenge) => (
-          <ChallengeCard challenge={challenge} signedIn={signedIn} onReadRules={() => setRules(challenge)} />
+          <ChallengeCard
+            challenge={challenge}
+            signedIn={signedIn}
+            onReadRules={() => setRules(challenge)}
+            onBuy={() => setBuying(challenge)}
+          />
         )}
         sortFields={CHALLENGE_SORT_FIELDS}
         groups={filterGroups(query, signedIn)}
@@ -70,6 +77,13 @@ export function ChallengeHome({
       {rules ? (
         <RulesDialog title={`Regras · ${rules.name}`} html={rules.descriptionLong} onClose={() => setRules(null)} />
       ) : null}
+      <BuyTicketsDialog
+        challenge={buying}
+        open={buying != null}
+        onOpenChange={(next) => {
+          if (!next) setBuying(null);
+        }}
+      />
     </>
   );
 }

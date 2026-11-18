@@ -15,6 +15,8 @@ export interface IEvolutionGuess {
   guess: Pick<ApiJson<ITeam>, "_id" | "name"> | null;
   guessStatus: GuessJson["guessStatus"];
   points?: number;
+  /** Pontuação do ticket acumulada até esta rodada. */
+  pointsAccumulateds?: number;
   isAutomatic?: boolean;
 }
 

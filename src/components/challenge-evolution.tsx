@@ -131,6 +131,7 @@ export function ChallengeEvolution({
           rounds={rounds}
           currentRound={challenge.roundCurrentIndex}
           winnerTicketIds={winnerTicketIds}
+          running={challenge.status === "RUNNING"}
           signedIn={signedIn}
           onMakeGuess={(guess, round) => {
             if (signedIn) setGuessTarget({ guess, round });

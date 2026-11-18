@@ -10,6 +10,8 @@ export interface EvolutionGuessView {
   guessStatus: string;
   ticketStatus: string;
   points: number | null;
+  /** Pontuação do ticket acumulada até esta rodada. */
+  pointsAccumulateds: number | null;
   ticketPoints: number | null;
   automatic: boolean;
   own: boolean;
@@ -32,6 +34,26 @@ export interface EvolutionView {
 }
 
 const REVEALED_ROUND = new Set(["FINISHED", "IN_HOMOLOGATION", "CLOSED_TO_GUESS"]);
+
+/** Tickets empatados na maior pontuação acumulada. Empate entra; sem pontuação, ninguém. */
+export function leadingTicketKeys(
+  guesses: Pick<EvolutionGuessView, "ticketId" | "ticketCode" | "pointsAccumulateds" | "ticketPoints">[],
+) {
+  let best: number | null = null;
+  for (const guess of guesses) {
+    const score = guess.pointsAccumulateds ?? guess.ticketPoints;
+    if (score == null) continue;
+    if (best == null || score > best) best = score;
+  }
+  if (best == null) return new Set<string>();
+  const keys = new Set<string>();
+  for (const guess of guesses) {
+    if ((guess.pointsAccumulateds ?? guess.ticketPoints) !== best) continue;
+    const key = guess.ticketId || guess.ticketCode;
+    if (key) keys.add(key);
+  }
+  return keys;
+}
 
 /** Time visível no card. Dono sempre vê o próprio; os demais seguem o app em `ticketGuessesOthers`. */
 export function showsGuessTeam(own: boolean, roundStatus: string) {
@@ -151,6 +173,7 @@ function normalizeGuess(value: unknown, own: boolean): EvolutionGuessView | null
     guessStatus: text(guess.guessStatus) || "PENDING",
     ticketStatus: text(ticket?.statusInGamming),
     points: optionalNumber(guess.points),
+    pointsAccumulateds: optionalNumber(guess.pointsAccumulateds),
     ticketPoints: optionalNumber(ticket?.points),
     automatic: guess.isAutomatic === true,
     own,

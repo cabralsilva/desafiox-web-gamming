@@ -11,6 +11,8 @@ export interface IEvolutionGuess {
   ticket: Pick<ApiJson<ITicket>, "_id" | "code" | "statusInGamming" | "saleAuthorized"> & {
     marketValue?: { value: number };
     points?: number;
+    /** Propostas recebidas. Só a rodada vigente usa essa lista. */
+    ticketTransfers?: IEvolutionTransfer[];
   };
   guess: Pick<ApiJson<ITeam>, "_id" | "name"> | null;
   guessStatus: GuessJson["guessStatus"];
@@ -29,6 +31,16 @@ export interface IEvolutionRound {
   owners: IEvolutionGuess[];
   /** Demais palpites. No anônimo, `ticketGuesses` inteiro entra aqui. */
   others: IEvolutionGuess[];
+}
+
+/** Proposta recebida no ticket do dono. */
+export interface IEvolutionTransfer {
+  _id: string;
+  status: "REQUESTED" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "FAILED";
+  amount: number;
+  createdAtDateTime: string;
+  accountDestination: { nickName: string };
+  infinitePay?: { checkoutUrl?: string };
 }
 
 /** Quadro de `/desafios/:slug` quando o desafio já começou. API-04. */

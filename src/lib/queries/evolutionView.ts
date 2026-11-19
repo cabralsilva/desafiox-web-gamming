@@ -1,5 +1,5 @@
 import type { IPublicEvolution } from "@/types/evolution";
-import type { IPublicChallengeCard } from "@/types/publicChallenge";
+import type { IMyTicketsSummary, IPublicChallengeCard } from "@/types/publicChallenge";
 
 export interface EvolutionGuessView {
   id: string;
@@ -13,8 +13,22 @@ export interface EvolutionGuessView {
   /** Pontuação do ticket acumulada até esta rodada. */
   pointsAccumulateds: number | null;
   ticketPoints: number | null;
+  /** Preço persistido do ticket. Ausente quando o mercado não exibe valor. */
+  marketValue: number | null;
+  saleAuthorized: boolean;
+  /** Propostas recebidas neste ticket, só preenchidas na rodada vigente. */
+  transfers: EvolutionTransferView[];
   automatic: boolean;
   own: boolean;
+}
+
+export interface EvolutionTransferView {
+  id: string;
+  status: "REQUESTED" | "PROCESSING";
+  amount: number;
+  createdAtDateTime: string;
+  proposerNickName: string;
+  checkoutUrl: string;
 }
 
 export interface EvolutionRoundView {
@@ -112,6 +126,7 @@ export function normalizeEvolution(payload: unknown, options: { signedIn: boolea
       name: text(championship?.name),
       modality: (text(championship?.modality) || "SOCCER") as IPublicChallengeCard["championship"]["modality"],
     },
+    myTickets: ticketsSummary(root.myTickets),
   };
 
   const rounds = fillRounds(
@@ -175,9 +190,17 @@ function normalizeGuess(value: unknown, own: boolean): EvolutionGuessView | null
     points: optionalNumber(guess.points),
     pointsAccumulateds: optionalNumber(guess.pointsAccumulateds),
     ticketPoints: optionalNumber(ticket?.points),
+    marketValue: marketValueOf(ticket?.marketValue),
+    saleAuthorized: ticket?.saleAuthorized === true,
+    transfers: transfersOf(ticket?.ticketTransfers),
     automatic: guess.isAutomatic === true,
     own,
   };
+}
+
+/** Colunas da primeira à última rodada. As que o payload não trouxe ficam vazias. */
+export function evolutionRounds(challenge: IPublicChallengeCard, rounds: EvolutionRoundView[] = []) {
+  return fillRounds(rounds, challenge);
 }
 
 function fillRounds(rounds: EvolutionRoundView[], challenge: IPublicChallengeCard) {
@@ -258,6 +281,48 @@ function numberValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function transfersOf(value: unknown): EvolutionTransferView[] {
+  return list(value).flatMap((item) => {
+    const row = record(item);
+    if (!row) return [];
+    const status = text(row.status);
+    if (status !== "REQUESTED" && status !== "PROCESSING") return [];
+    const amount = optionalNumber(row.amount);
+    const proposer = record(row.accountDestination);
+    const nickName = text(proposer?.nickName);
+    const id = text(row._id);
+    if (amount == null || !nickName || !id) return [];
+    return [{
+      id,
+      status,
+      amount,
+      createdAtDateTime: text(row.createdAtDateTime),
+      proposerNickName: nickName.replace(/^@/, ""),
+      checkoutUrl: checkoutUrlOf(row),
+    }];
+  });
+}
+
+function checkoutUrlOf(row: Record<string, unknown>) {
+  if (typeof row.checkoutUrl === "string" && row.checkoutUrl.trim()) return row.checkoutUrl.trim();
+  const pay = record(row.infinitePay);
+  return typeof pay?.checkoutUrl === "string" ? pay.checkoutUrl.trim() : "";
+}
+
+function marketValueOf(value: unknown): number | null {
+  if (typeof value === "number" || typeof value === "string") return optionalNumber(value);
+  return optionalNumber(record(value)?.value);
+}
+
 function optionalNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function ticketsSummary(value: unknown): IMyTicketsSummary | undefined {
+  const summary = record(value);
+  if (!summary) return undefined;
+  const active = optionalNumber(summary.active);
+  const total = optionalNumber(summary.total);
+  if (active == null || total == null) return undefined;
+  return { active, total };
 }

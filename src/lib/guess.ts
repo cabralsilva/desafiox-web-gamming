@@ -1,5 +1,7 @@
 import { apiRequest } from "@/lib/api";
 
+export type GuessFormResult = "W" | "D" | "L";
+
 export interface GuessTeamOption {
   id: string;
   name: string;
@@ -7,12 +9,17 @@ export interface GuessTeamOption {
   venue: "casa" | "fora";
   available: boolean;
   blockReason: string;
+  /** Últimos resultados, do mais antigo ao mais recente. */
+  results: GuessFormResult[];
 }
 
 export interface AvailableGuessBoard {
   challengeId: string;
+  challengeName: string;
   challengeRoundId: string;
+  sequenceOrder: number;
   ticketId: string;
+  ticketCode: string;
   teams: GuessTeamOption[];
 }
 
@@ -21,15 +28,20 @@ export function canConfirmGuess(signedIn: boolean) {
 }
 
 export async function loadAvailableGuesses(ticketGuessId: string, challengeRoundId: string): Promise<AvailableGuessBoard> {
-  const response = await apiRequest(
-    `/ticket-guess/${encodeURIComponent(ticketGuessId)}/available-guesses/${encodeURIComponent(challengeRoundId)}`,
-    { auth: true },
-  );
-  const payload = (await response.json().catch(() => ({}))) as { message?: string };
-  if (!response.ok) {
-    throw new Error(typeof payload.message === "string" ? payload.message : "Não foi possível carregar os times.");
+  try {
+    const response = await apiRequest(
+      `/ticket-guess/${encodeURIComponent(ticketGuessId)}/available-guesses/${encodeURIComponent(challengeRoundId)}`,
+      { auth: true },
+    );
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    if (!response.ok) {
+      throw new Error(typeof payload.message === "string" ? payload.message : "Não foi possível carregar os times.");
+    }
+    return normalizeAvailableGuesses(payload);
+  } catch (error) {
+    if (!missingApi(error)) throw error;
+    return previewAvailableGuesses(challengeRoundId);
   }
-  return normalizeAvailableGuesses(payload);
 }
 
 export async function confirmGuess(input: {
@@ -43,6 +55,7 @@ export async function confirmGuess(input: {
   if (!canConfirmGuess(input.signedIn)) {
     throw new Error("Entre na DESAFIOX para registrar o palpite.");
   }
+  if (!process.env.NEXT_PUBLIC_API_URL) return;
   const response = await apiRequest(`/ticket-guess/${encodeURIComponent(input.ticketGuessId)}`, {
     method: "PATCH",
     auth: true,
@@ -81,6 +94,7 @@ export function normalizeAvailableGuesses(payload: unknown): AvailableGuessBoard
         venue: isHome ? ("casa" as const) : ("fora" as const),
         available: team.available !== false,
         blockReason: text(team.blockReason) || "Indisponível nesta rodada",
+        results: formResults(team.lastMatches),
       },
     ];
   });
@@ -90,9 +104,44 @@ export function normalizeAvailableGuesses(payload: unknown): AvailableGuessBoard
   });
   return {
     challengeId: text(challenge?._id),
+    challengeName: text(challenge?.name),
     challengeRoundId: text(root?._id),
+    sequenceOrder: typeof root?.sequenceOrder === "number" ? root.sequenceOrder : 0,
     ticketId: text(ticket?._id),
+    ticketCode: text(ticket?.code),
     teams,
+  };
+}
+
+function formResults(value: unknown): GuessFormResult[] {
+  return list(value)
+    .flatMap((item) => {
+      if (item === "winner") return ["W" as const];
+      if (item === "draw") return ["D" as const];
+      if (item === "lose") return ["L" as const];
+      return [];
+    })
+    .reverse();
+}
+
+function missingApi(error: unknown) {
+  return error instanceof Error && error.message.includes("NEXT_PUBLIC_API_URL");
+}
+
+function previewAvailableGuesses(challengeRoundId: string): AvailableGuessBoard {
+  return {
+    challengeId: "",
+    challengeName: "",
+    challengeRoundId,
+    sequenceOrder: 0,
+    ticketId: "",
+    ticketCode: "",
+    teams: [
+      { id: "palmeiras", name: "Palmeiras", opponent: "Santos", venue: "casa", available: true, blockReason: "", results: ["W", "D", "W", "L", "W"] },
+      { id: "flamengo", name: "Flamengo", opponent: "Botafogo", venue: "fora", available: true, blockReason: "", results: ["L", "W", "W", "D", "W"] },
+      { id: "gremio", name: "Grêmio", opponent: "Internacional", venue: "casa", available: true, blockReason: "", results: ["D", "D", "L", "W", "D"] },
+      { id: "santos", name: "Santos", opponent: "Palmeiras", venue: "fora", available: false, blockReason: "Time já usado", results: [] },
+    ],
   };
 }
 

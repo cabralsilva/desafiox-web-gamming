@@ -5,7 +5,7 @@ export type { IMyTicketsSummary, IPublicChallengeCard } from "./publicChallenge"
 export { PUBLIC_CHALLENGE_POPULATE, PUBLIC_CHALLENGE_SELECT } from "./publicChallenge";
 export type { IMarketTicketCard } from "./marketTicket";
 export { MARKET_TICKET_POPULATE, MARKET_TICKET_SELECT } from "./marketTicket";
-export type { IEvolutionGuess, IEvolutionRound, IPublicEvolution } from "./evolution";
+export type { IEvolutionGuess, IEvolutionRound, IEvolutionTransfer, IPublicEvolution } from "./evolution";
 export type { IBannerSlide } from "./banner";
 export type { IWhatsAppCodeConfirm, IWhatsAppCodeRequest, IWhatsAppVerification } from "./whatsappVerification";
 export type { ISignInRequest } from "./signIn";

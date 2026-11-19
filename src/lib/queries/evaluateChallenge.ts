@@ -31,6 +31,8 @@ export const EVALUATE_SELECT = [
   "challengeRounds.ticketGuesses.ticket.code",
   "challengeRounds.ticketGuesses.ticket.points",
   "challengeRounds.ticketGuesses.ticket.statusInGamming",
+  "challengeRounds.ticketGuesses.ticket.marketValue",
+  "challengeRounds.ticketGuesses.ticket.saleAuthorized",
   "challengeRounds.ticketGuessesOwner._id",
   "challengeRounds.ticketGuessesOwner.points",
   "challengeRounds.ticketGuessesOwner.pointsAccumulateds",
@@ -42,6 +44,8 @@ export const EVALUATE_SELECT = [
   "challengeRounds.ticketGuessesOwner.ticket.code",
   "challengeRounds.ticketGuessesOwner.ticket.points",
   "challengeRounds.ticketGuessesOwner.ticket.statusInGamming",
+  "challengeRounds.ticketGuessesOwner.ticket.marketValue",
+  "challengeRounds.ticketGuessesOwner.ticket.saleAuthorized",
   "challengeRounds.ticketGuessesOthers._id",
   "challengeRounds.ticketGuessesOthers.points",
   "challengeRounds.ticketGuessesOthers.pointsAccumulateds",
@@ -52,6 +56,8 @@ export const EVALUATE_SELECT = [
   "challengeRounds.ticketGuessesOthers.ticket.code",
   "challengeRounds.ticketGuessesOthers.ticket.points",
   "challengeRounds.ticketGuessesOthers.ticket.statusInGamming",
+  "challengeRounds.ticketGuessesOthers.ticket.marketValue",
+  "challengeRounds.ticketGuessesOthers.ticket.saleAuthorized",
 ].join(",");
 
 export function evaluateChallengePath(idOrSlug: string, signedIn: boolean) {

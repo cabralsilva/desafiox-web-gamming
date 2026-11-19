@@ -83,6 +83,8 @@ describe("lista de desafios", () => {
       "brasileirao-sobrevivencia",
       "copa-sobrevivencia",
       "estadual-sobrevivencia",
+      "libertadores-sobrevivencia",
+      "sul-americana-sobrevivencia",
     ]);
     const byPrize = listChallenges(publicChallengePage.items, {
       ...guest,
@@ -92,6 +94,8 @@ describe("lista de desafios", () => {
     expect(byPrize.items.map((item) => item.slug)).toEqual([
       "estadual-sobrevivencia",
       "copa-sobrevivencia",
+      "libertadores-sobrevivencia",
+      "sul-americana-sobrevivencia",
       "brasileirao-sobrevivencia",
     ]);
   });
@@ -125,7 +129,11 @@ describe("lista de desafios", () => {
 
   it("filtra ativos e eliminados só com sessão", () => {
     const active = listChallenges(sessionChallengePage.items, { ...guest, signedIn: true, tickets: "active" });
-    expect(active.items.map((item) => item.slug)).toEqual(["brasileirao-sobrevivencia"]);
+    expect(active.items.map((item) => item.slug)).toEqual([
+      "sul-americana-sobrevivencia",
+      "libertadores-sobrevivencia",
+      "brasileirao-sobrevivencia",
+    ]);
     const eliminated = listChallenges(sessionChallengePage.items, {
       ...guest,
       signedIn: true,

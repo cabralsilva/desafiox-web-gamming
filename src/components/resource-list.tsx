@@ -23,6 +23,7 @@ export function ResourceList<T, Query extends ListingControls>({
   hrefFor,
   searchLabel,
   searchPlaceholder,
+  gridClassName = "md:grid md:grid-cols-2 md:gap-4 xl:grid-cols-3",
   empty,
 }: {
   items: T[];
@@ -35,6 +36,7 @@ export function ResourceList<T, Query extends ListingControls>({
   hrefFor: (patch: Partial<Query>) => string;
   searchLabel: string;
   searchPlaceholder: string;
+  gridClassName?: string;
   empty?: ReactNode;
 }) {
   return (
@@ -51,11 +53,11 @@ export function ResourceList<T, Query extends ListingControls>({
         <ul
           className={cn(
             "mt-6 flex flex-col gap-3",
-            query.view === "grid" && "md:grid md:grid-cols-2 md:gap-4 xl:grid-cols-3",
+            query.view === "grid" && gridClassName,
           )}
         >
           {items.map((item) => (
-            <li key={getKey(item)}>{renderCard(item)}</li>
+            <li key={getKey(item)} className="min-w-0">{renderCard(item)}</li>
           ))}
         </ul>
       )}

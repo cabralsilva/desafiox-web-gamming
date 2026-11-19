@@ -1,19 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { AccountAccessChoices } from "@/components/auth-links";
+import { AuthLinks } from "@/components/auth-links";
 import { CloseIcon } from "@/components/icons";
 import { RulesDialog } from "@/components/rules-dialog";
+import { useSession } from "@/components/session-provider";
 import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/api";
+import { accountIdFromToken } from "@/lib/jwt";
 import { formatMoneyBR } from "@/lib/money";
+import { getAuthToken } from "@/lib/session";
+import { cn } from "@/lib/utils";
 import {
   createTicketTransferProposal,
   DIRECT_SALE_CONFIRM_LABEL,
   loadTicketTransferPreview,
   OWNER_DECIDES_SALE,
   PROPOSAL_CONFIRM_LABEL,
+  readPhoneVerified,
   transferProposalBlockFromMessage,
   type TicketTransferPreview,
+  type TransferPaymentChoice,
   type TransferProposalBlock,
 } from "@/lib/ticket-transfer";
 
@@ -47,6 +55,7 @@ export function TicketTransferProposalDialog({
   onOpenChange: (open: boolean) => void;
   onRecorded: (outcome: TransferProposalBlock, checkoutUrl: string) => void;
 }) {
+  const { balance, balanceStatus } = useSession();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const submittingRef = useRef(false);
   const titleId = useId();
@@ -58,10 +67,17 @@ export function TicketTransferProposalDialog({
   const [acceptedRules, setAcceptedRules] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [method, setMethod] = useState<TransferPaymentChoice>("checkout");
+  const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null);
 
   const rules = rulesHtml.trim();
   const saleAuthorized = preview?.saleAuthorized ?? saleAuthorizedProp;
-  const canConfirm = Boolean(preview && preview.marketValue != null && rules && acceptedRules && !loadError);
+  const price = preview?.marketValue ?? marketValue;
+  const insufficient = saleAuthorized && method === "credits" && balanceStatus === "ready" && balance != null && price != null && price > balance;
+  const whatsAppPending = phoneVerified === false;
+  const canConfirm = Boolean(
+    preview && preview.marketValue != null && rules && acceptedRules && !loadError && !insufficient && !whatsAppPending,
+  );
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -97,6 +113,26 @@ export function TicketTransferProposalDialog({
     };
   }, [signedIn, ticketId, ticketCode, ownerNickName, points, marketValue, saleAuthorizedProp]);
 
+  useEffect(() => {
+    if (!signedIn) {
+      setPhoneVerified(null);
+      return;
+    }
+    const accountId = accountIdFromToken(getAuthToken());
+    if (!accountId || !process.env.NEXT_PUBLIC_API_URL) return;
+    let cancelled = false;
+    void apiRequest(`/account/${encodeURIComponent(accountId)}?select=phoneVerified`, { auth: true })
+      .then(async (response) => {
+        if (!response.ok || cancelled) return;
+        const value = readPhoneVerified(await response.json());
+        if (!cancelled && value != null) setPhoneVerified(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
+
   function close() {
     if (submittingRef.current) return;
     onOpenChange(false);
@@ -108,8 +144,17 @@ export function TicketTransferProposalDialog({
     setSubmitting(true);
     setSubmitError("");
     try {
-      const result = await createTicketTransferProposal(ticketId);
+      const result = await createTicketTransferProposal(ticketId, saleAuthorized ? method : undefined);
       if (saleAuthorized) {
+        if (method === "credits") {
+          if (!result.offline && result.checkoutUrl.trim()) {
+            setSubmitError("O saldo não concluiu este pagamento. Use o checkout.");
+            return;
+          }
+          onRecorded("processing", "");
+          onOpenChange(false);
+          return;
+        }
         const checkoutUrl = result.checkoutUrl.trim();
         if (!checkoutUrl && !result.offline) {
           setSubmitError("Não foi possível iniciar o pagamento. Tente novamente.");
@@ -231,6 +276,33 @@ export function TicketTransferProposalDialog({
                       <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">Nenhum time disponível.</p>
                     )}
                   </div>
+                  {saleAuthorized ? (
+                    <div className="space-y-2" role="radiogroup" aria-label="Forma de pagamento">
+                      <PaymentOption
+                        title="Checkout seguro"
+                        detail="Pix sem taxas. Cartão pode ter taxas."
+                        selected={method === "checkout"}
+                        onSelect={() => setMethod("checkout")}
+                      />
+                      <PaymentOption
+                        title="Saldo da carteira"
+                        detail={balanceStatus === "ready" && balance != null ? formatMoneyBR(balance) : "Saldo da sessão"}
+                        selected={method === "credits"}
+                        onSelect={() => setMethod("credits")}
+                      />
+                      <Link href="/carteira" className="inline-flex text-xs font-semibold text-accent hover:underline">
+                        Ir para a carteira
+                      </Link>
+                      {insufficient ? (
+                        <p className="text-sm text-destructive">Saldo insuficiente. O checkout continua disponível.</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {whatsAppPending ? (
+                    <p className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-sm">
+                      Confirme o WhatsApp para comprar ou propor na DESAFIOX.
+                    </p>
+                  ) : null}
                   {submitError ? <p className="text-sm text-primary">{submitError}</p> : null}
                 </div>
               )}
@@ -238,9 +310,15 @@ export function TicketTransferProposalDialog({
 
             <div className="flex shrink-0 gap-2 border-t border-border bg-secondary/30 px-5 py-4">
               <Button type="button" variant="outline" className="flex-1" onClick={close}>Cancelar</Button>
-              <Button type="button" variant="success" className="flex-1" disabled={!canConfirm || submitting} onClick={() => void confirm()}>
-                {submitting ? "Enviando…" : saleAuthorized ? DIRECT_SALE_CONFIRM_LABEL : PROPOSAL_CONFIRM_LABEL}
-              </Button>
+              {whatsAppPending ? (
+                <Button asChild variant="success" className="flex-1">
+                  <Link href="/conta/whatsapp">Confirmar WhatsApp</Link>
+                </Button>
+              ) : (
+                <Button type="button" variant="success" className="flex-1" disabled={!canConfirm || submitting} onClick={() => void confirm()}>
+                  {submitting ? "Enviando…" : saleAuthorized ? DIRECT_SALE_CONFIRM_LABEL : PROPOSAL_CONFIRM_LABEL}
+                </Button>
+              )}
             </div>
           </>
         ) : (
@@ -254,12 +332,37 @@ export function TicketTransferProposalDialog({
                 <CloseIcon />
               </button>
             </div>
-            <AccountAccessChoices />
+            <AuthLinks className="mt-6" />
           </div>
         )}
       </dialog>
       {showRules ? <RulesDialog title="Regras do desafio" html={rules} onClose={() => setShowRules(false)} /> : null}
     </div>
+  );
+}
+
+function PaymentOption({
+  title,
+  detail,
+  selected,
+  onSelect,
+}: {
+  title: string;
+  detail: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn("w-full rounded-md px-3 py-3 text-left", selected ? "border-2 border-accent bg-accent/10" : "border border-border")}
+    >
+      <span className="block text-sm font-bold">{title}</span>
+      <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
+    </button>
   );
 }
 

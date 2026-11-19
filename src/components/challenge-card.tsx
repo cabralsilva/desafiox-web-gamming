@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
+import { ChallengeTypeTag } from "@/components/challenge-type-tag";
 import { ChevronsRightIcon, ScrollHintIcon } from "@/components/icons";
 import { formatDateBR, isCurrentPricingWindow } from "@/lib/dates";
 import { formatMoneyBR } from "@/lib/money";
@@ -40,9 +41,15 @@ export function ChallengeCard({
   onBuy: () => void;
 }) {
   const notStarted = challenge.status === "OPEN_TO_BUY_TICKETS";
+  const finished = challenge.status === "FINISHED";
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+    <article
+      className={cn(
+        "flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card",
+        finished && "saturate-0",
+      )}
+    >
       <div className="flex flex-1 flex-col px-5 pb-4 pt-5">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg font-black tracking-tight">{challenge.name}</h2>
@@ -57,8 +64,11 @@ export function ChallengeCard({
             {STATUS_LABEL[challenge.status] ?? challenge.status}
           </span>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {MODALITY_LABEL[challenge.championship.modality] ?? challenge.championship.modality} · {challenge.championship.name}
+        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          <ChallengeTypeTag type={challenge.type} />
+          <span>
+            {MODALITY_LABEL[challenge.championship.modality] ?? challenge.championship.modality} · {challenge.championship.name}
+          </span>
         </p>
         <PricingTimeline
           windows={challenge.pricing}
@@ -87,7 +97,9 @@ export function ChallengeCard({
       <footer className="mt-auto flex border-t border-border">
         <FooterCell>
           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Prêmio</span>
-          <span className="text-sm font-bold text-highlight">{formatMoneyBR(challenge.budgetAccumulated)}</span>
+          <span className={cn("text-sm font-bold", finished ? "text-muted-foreground" : "text-highlight")}>
+            {formatMoneyBR(challenge.budgetAccumulated)}
+          </span>
         </FooterCell>
         <button type="button" className={footerActionClass} onClick={onReadRules}>
           Ver regras
@@ -96,7 +108,10 @@ export function ChallengeCard({
           href={`/desafios/${challenge.slug}`}
           className={cn(
             footerActionClass,
-            "flex-row bg-[hsl(2_68%_32%)] text-primary-foreground hover:bg-[hsl(2_68%_38%)]",
+            "flex-row text-primary-foreground",
+            finished
+              ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              : "bg-[hsl(2_68%_10%)] hover:bg-[hsl(2_68%_20%)]",
           )}
         >
           Ver evolução

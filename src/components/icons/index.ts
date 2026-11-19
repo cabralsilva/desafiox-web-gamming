@@ -4,5 +4,8 @@ export { ChevronLeftIcon } from "@/components/icons/chevron-left";
 export { ChevronRightIcon } from "@/components/icons/chevron-right";
 export { ChevronsRightIcon } from "@/components/icons/chevrons-right";
 export { CloseIcon } from "@/components/icons/close";
+export { CrownIcon } from "@/components/icons/crown";
+export { HandIcon } from "@/components/icons/hand";
+export { HandshakeIcon } from "@/components/icons/handshake";
 export { ScrollHintIcon } from "@/components/icons/scroll-hint";
 export { SearchIcon } from "@/components/icons/search";

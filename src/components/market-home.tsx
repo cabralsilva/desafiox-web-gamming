@@ -44,7 +44,7 @@ export function MarketHome({
   const needsOwner = Boolean(signedIn && query.owner && accountId);
   const source = needsOwner && ownerPage ? ownerPage : initial;
   const items = source.items.map((item) =>
-    negotiatingIds.has(item._id) ? { ...item, inNegotiation: true, marketValue: undefined } : item,
+    negotiatingIds.has(item._id) ? { ...item, inNegotiation: true } : item,
   );
   const hasFilter = Boolean(query.q || query.availability || (signedIn && query.owner));
 
@@ -91,6 +91,7 @@ export function MarketHome({
           <MarketTicketCard
             ticket={ticket}
             accountId={accountId}
+            layout={query.view}
             onBuy={() => openOffer(ticket)}
             onPropose={() => openOffer(ticket)}
           />

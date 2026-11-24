@@ -131,17 +131,21 @@ export function readMarketTicket(value: unknown): IMarketTicketCard | null {
   if (!id || !code || !nickName || !name) return null;
   const championship = asRecord(challenge?.championship);
   const marketValue = readMarketValue(record.marketValue);
+  const negotiation = readNegotiation(record);
   return {
     _id: id,
     code,
     saleAuthorized: record.saleAuthorized === true,
     points: finiteNumber(record.points) ?? 0,
     marketValue: marketValue == null ? undefined : { value: marketValue },
-    inNegotiation: record.inNegotiation === true,
+    inNegotiation: negotiation.inNegotiation,
+    proposerNickName: negotiation.proposerNickName,
+    negotiationExpiresAt: negotiation.negotiationExpiresAt,
     accountId: entityId(account?._id ?? account?.id),
     account: { nickName },
     challenge: {
       name,
+      slug: text(challenge?.slug),
       descriptionLong: text(challenge?.descriptionLong),
       budgetAccumulated: finiteNumber(challenge?.budgetAccumulated) ?? 0,
       currentRoundIndex: roundIndex(challenge?.currentRound),
@@ -226,6 +230,69 @@ function pageRecord(payload: unknown): Record<string, unknown> | null {
   if (Array.isArray(record.items)) return record;
   const data = asRecord(record.data);
   if (data && Array.isArray(data.items)) return data;
+  return null;
+}
+
+const PROPOSAL_DECISION_MS = 24 * 60 * 60 * 1000;
+
+function readNegotiation(record: Record<string, unknown>): { inNegotiation: boolean; proposerNickName: string | null; negotiationExpiresAt: string | null } {
+  const flag = record.inNegotiation;
+  const detail = asRecord(flag);
+  const open = openNegotiation(record.ticketTransfers) ?? openNegotiation(record.transfers);
+  const proposerNickName = firstNick(
+    detail?.proposerNickName,
+    nickOf(detail?.accountDestination),
+    nickOf(detail?.proposer),
+    record.proposerNickName,
+    nickOf(record.proposer),
+    open?.nick,
+  );
+  const negotiationExpiresAt = isoDate(record.negotiationExpiresAt) || isoDate(detail?.expiresAt) || isoDate(detail?.paymentDueAt) || open?.expiresAt || null;
+  const inNegotiation = flag === true || detail != null || proposerNickName != null;
+  return {
+    inNegotiation,
+    proposerNickName: inNegotiation ? proposerNickName : null,
+    negotiationExpiresAt: inNegotiation ? negotiationExpiresAt : null,
+  };
+}
+
+function openNegotiation(value: unknown): { nick: string; expiresAt: string | null } | null {
+  if (!Array.isArray(value)) return null;
+  const open = value.flatMap((item) => {
+    const row = asRecord(item);
+    if (!row) return [];
+    const status = text(row.status);
+    if (status !== "REQUESTED" && status !== "PROCESSING") return [];
+    const nick = nickOf(row.accountDestination) || nickOf(row.proposer) || text(row.proposerNickName);
+    return nick ? [{ status, nick, expiresAt: transferExpiresAt(row, status) }] : [];
+  });
+  return open.find((item) => item.status === "PROCESSING") ?? open[0] ?? null;
+}
+
+function transferExpiresAt(row: Record<string, unknown>, status: string): string | null {
+  if (status === "PROCESSING") return isoDate(row.paymentDueAt) || isoDate(row.expiresAt);
+  const created = isoDate(row.createdAtDateTime) || isoDate(row.createdAt);
+  if (created) return new Date(Date.parse(created) + PROPOSAL_DECISION_MS).toISOString();
+  return isoDate(row.paymentDueAt) || isoDate(row.expiresAt);
+}
+
+function isoDate(value: unknown): string | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  const raw = text(value);
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+}
+
+function nickOf(value: unknown): string | null {
+  return firstNick(asRecord(value)?.nickName);
+}
+
+function firstNick(...values: unknown[]): string | null {
+  for (const value of values) {
+    const nick = text(value).replace(/^@/, "");
+    if (nick) return nick;
+  }
   return null;
 }
 

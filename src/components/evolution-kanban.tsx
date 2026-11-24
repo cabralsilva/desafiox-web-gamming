@@ -28,7 +28,16 @@ const GUESS_LABEL: Record<string, string> = {
 
 const LEADER_HINT = "Dada a pontuação, este ticket seria vencedor até o momento.";
 
-export function EvolutionKanban({
+export function EvolutionKanban(props: EvolutionBoardProps) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-bold uppercase tracking-wider">Palpites por rodada</h2>
+      <EvolutionBoard {...props} />
+    </section>
+  );
+}
+
+export function EvolutionBoard({
   rounds,
   currentRound,
   winnerTicketIds,
@@ -36,15 +45,9 @@ export function EvolutionKanban({
   signedIn,
   rulesHtml,
   onMakeGuess,
-}: {
-  rounds: EvolutionRoundView[];
-  currentRound: number;
-  winnerTicketIds: string[];
-  running: boolean;
-  signedIn: boolean;
-  rulesHtml: string;
-  onMakeGuess: (guess: EvolutionGuessView, round: EvolutionRoundView) => void;
-}) {
+  highlightTicketId = null,
+  highlightTicketCode = null,
+}: EvolutionBoardProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const recallRef = useRef<HTMLButtonElement>(null);
@@ -53,12 +56,17 @@ export function EvolutionKanban({
   const tailRef = useRef<HTMLDivElement>(null);
   const alignRef = useRef<(behavior?: ScrollBehavior) => void>(() => undefined);
   const [recall, setRecall] = useState<"left" | "right" | null>(null);
-  const [trailId, setTrailId] = useState<string | null>(null);
+  const pinnedTrail = trailKeyFor(rounds, highlightTicketId, highlightTicketCode);
+  const [trailId, setTrailId] = useState<string | null>(pinnedTrail);
   const winners = new Set(winnerTicketIds);
   const focusIndex = Math.max(
     0,
     rounds.findIndex((round) => round.sequenceOrder === currentRound),
   );
+
+  useEffect(() => {
+    setTrailId(pinnedTrail);
+  }, [pinnedTrail]);
 
   useLayoutEffect(() => {
     const pane = scroller.current;
@@ -124,8 +132,6 @@ export function EvolutionKanban({
   }, [recall]);
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-bold uppercase tracking-wider">Palpites por rodada</h2>
       <div ref={stageRef} className="relative">
         <div className="pointer-events-none flex justify-center pb-1" aria-hidden="true">
           <ScrollHintIcon className="h-1.5 w-4 text-muted-foreground/80" />
@@ -178,9 +184,20 @@ export function EvolutionKanban({
           </button>
         ) : null}
       </div>
-    </section>
   );
 }
+
+type EvolutionBoardProps = {
+  rounds: EvolutionRoundView[];
+  currentRound: number;
+  winnerTicketIds: string[];
+  running: boolean;
+  signedIn: boolean;
+  rulesHtml: string;
+  onMakeGuess: (guess: EvolutionGuessView, round: EvolutionRoundView) => void;
+  highlightTicketId?: string | null;
+  highlightTicketCode?: string | null;
+};
 
 function placeRecall(button: HTMLButtonElement, stage: HTMLElement) {
   const stageBox = stage.getBoundingClientRect();
@@ -203,6 +220,17 @@ function placeRecall(button: HTMLButtonElement, stage: HTMLElement) {
 
 function ticketKey(guess: EvolutionGuessView) {
   return guess.ticketId || guess.ticketCode;
+}
+
+function trailKeyFor(rounds: EvolutionRoundView[], ticketId: string | null, ticketCode: string | null) {
+  if (!ticketId && !ticketCode) return null;
+  for (const round of rounds) {
+    const guess = [...round.owners, ...round.others].find(
+      (item) => (ticketId != null && item.ticketId === ticketId) || (ticketCode != null && item.ticketCode === ticketCode),
+    );
+    if (guess) return ticketKey(guess);
+  }
+  return null;
 }
 
 function roundHasTicket(round: EvolutionRoundView | undefined, ticketId: string | null) {

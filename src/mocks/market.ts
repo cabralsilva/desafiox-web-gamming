@@ -7,8 +7,11 @@ const rules = "<p>Regras do desafio na DESAFIOX.</p>";
 function ticket(
   input: Pick<IMarketTicketCard, "_id" | "code" | "saleAuthorized" | "points" | "accountId" | "inNegotiation"> & {
     nickName: string;
+    proposerNickName?: string;
+    negotiationExpiresAt?: string;
     marketValue?: number;
     challengeName: string;
+    challengeSlug: string;
     championship: string;
     modality: IMarketTicketCard["challenge"]["championship"]["modality"];
     prize: number;
@@ -23,10 +26,14 @@ function ticket(
     points: input.points,
     marketValue: input.marketValue == null ? undefined : { value: input.marketValue },
     inNegotiation: input.inNegotiation,
+    proposerNickName: input.inNegotiation ? input.proposerNickName ?? null : null,
+    negotiationExpiresAt: input.inNegotiation ? input.negotiationExpiresAt ?? null : null,
+    winProbability: Math.max(3, Math.round(input.points * 0.67)),
     accountId: input.accountId,
     account: { nickName: input.nickName },
     challenge: {
       name: input.challengeName,
+      slug: input.challengeSlug,
       descriptionLong: rules,
       budgetAccumulated: input.prize,
       currentRoundIndex: input.currentRound,
@@ -38,6 +45,7 @@ function ticket(
 
 const brasileirao = {
   challengeName: "Brasileirão sobrevivência",
+  challengeSlug: "brasileirao-sobrevivencia",
   championship: "Brasileirão Série A",
   modality: "SOCCER" as Modality,
   prize: 48200,
@@ -47,6 +55,7 @@ const brasileirao = {
 
 const libertadores = {
   challengeName: "Libertadores mata-mata",
+  challengeSlug: "libertadores-sobrevivencia",
   championship: "Copa Libertadores",
   modality: "SOCCER" as Modality,
   prize: 91000,
@@ -83,7 +92,10 @@ export const marketTicketCatalog: IMarketTicketCard[] = [
     code: "BX-3307",
     saleAuthorized: false,
     points: 18,
+    marketValue: 125,
     inNegotiation: true,
+    proposerNickName: "lia_dx",
+    negotiationExpiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
     accountId: "acct-pedro",
     nickName: "pedro_dx",
     ...brasileirao,
@@ -137,7 +149,10 @@ export const marketTicketCatalog: IMarketTicketCard[] = [
     code: "BX-4501",
     saleAuthorized: false,
     points: 6,
+    marketValue: 90,
     inNegotiation: true,
+    proposerNickName: "caio_dx",
+    negotiationExpiresAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(),
     accountId: "acct-nanda",
     nickName: "nanda_dx",
     ...libertadores,

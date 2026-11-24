@@ -6,7 +6,7 @@ type TicketJson = ApiJson<ITicket>;
 /**
  * Card do mercado. `inNegotiation` não existe no ticket: a API calcula
  * a partir de transferência `REQUESTED` ou `PROCESSING`.
- * Com negociação aberta a leitura pública omite `marketValue`.
+ * Com negociação aberta a API pode omitir `marketValue`; se o valor vier, o card mostra.
  */
 export interface IMarketTicketCard {
   _id: TicketJson["_id"];
@@ -15,10 +15,17 @@ export interface IMarketTicketCard {
   points: number;
   marketValue?: { value: number };
   inNegotiation: boolean;
+  /** Apelido de quem propôs, quando há transferência REQUESTED ou PROCESSING. */
+  proposerNickName: string | null;
+  /** Instante em que a negociação aberta é cancelada. */
+  negotiationExpiresAt: string | null;
+  /** Percentual mockado. A API ainda não envia a chance de vencer. */
+  winProbability?: number;
   accountId: string;
   account: { nickName: string };
   challenge: {
     name: string;
+    slug: string;
     descriptionLong: string;
     budgetAccumulated: number;
     currentRoundIndex: number | null;
@@ -42,6 +49,7 @@ export const MARKET_TICKET_SELECT = [
   "account._id",
   "points",
   "challenge.name",
+  "challenge.slug",
   "challenge.descriptionLong",
   "challenge.currentRound",
   "challenge.currentRound.globalRoundIndex",

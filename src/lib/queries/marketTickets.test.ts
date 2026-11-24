@@ -106,11 +106,42 @@ describe("lista do mercado", () => {
     })?.items).toHaveLength(1);
   });
 
-  it("trata negociação sem valor e impede comprar o próprio ticket", () => {
+  it("mantém o valor na negociação e impede comprar o próprio ticket", () => {
     const negotiating = marketTicketCatalog.find((item) => item.code === "BX-3307");
     const own = marketTicketCatalog[0];
-    expect(negotiating?.marketValue).toBeUndefined();
+    expect(negotiating?.marketValue).toEqual({ value: 125 });
+    expect(negotiating?.proposerNickName).toBe("lia_dx");
     expect(negotiating ? marketTicketAction(negotiating, null) : null).toBe("negotiating");
+    const fromTransfer = readMarketTicket({
+      _id: "t2",
+      code: "BX-2",
+      saleAuthorized: false,
+      points: 3,
+      marketValue: { value: 40 },
+      account: { _id: "acc-2", nickName: "pedro_dx" },
+      challenge: { name: "Copa", budgetAccumulated: 10, championship: { name: "Libertadores", modality: "SOCCER" } },
+      ticketTransfers: [
+        { status: "REQUESTED", createdAtDateTime: "2026-11-21T12:00:00.000Z", accountDestination: { nickName: "@lia_dx" } },
+        { status: "PROCESSING", paymentDueAt: "2026-11-22T18:00:00.000Z", accountDestination: { nickName: "caio_dx" } },
+        { status: "COMPLETED", accountDestination: { nickName: "bia_dx" } },
+      ],
+    });
+    expect(fromTransfer?.inNegotiation).toBe(true);
+    expect(fromTransfer?.marketValue).toEqual({ value: 40 });
+    expect(fromTransfer?.proposerNickName).toBe("caio_dx");
+    expect(fromTransfer?.negotiationExpiresAt).toBe("2026-11-22T18:00:00.000Z");
+    const requestedOnly = readMarketTicket({
+      _id: "t3",
+      code: "BX-3",
+      saleAuthorized: false,
+      points: 1,
+      account: { _id: "acc-3", nickName: "ana_dx" },
+      challenge: { name: "Copa", budgetAccumulated: 10, championship: { name: "Libertadores", modality: "SOCCER" } },
+      ticketTransfers: [
+        { status: "REQUESTED", createdAtDateTime: "2026-11-21T12:00:00.000Z", accountDestination: { nickName: "lia_dx" } },
+      ],
+    });
+    expect(requestedOnly?.negotiationExpiresAt).toBe("2026-11-22T12:00:00.000Z");
     expect(marketTicketAction(own, own.accountId)).toBe("own");
     expect(marketTicketAction(own, "outra-conta")).toBe("buy");
     expect(marketTicketAction(marketTicketCatalog[1], null)).toBe("propose");
@@ -122,7 +153,7 @@ describe("lista do mercado", () => {
     const negotiation = listMarketTickets(marketTicketCatalog, { ...guest, availability: "negotiation" });
     expect(sale.items.every((item) => item.saleAuthorized && !item.inNegotiation)).toBe(true);
     expect(proposal.items.every((item) => !item.saleAuthorized && !item.inNegotiation)).toBe(true);
-    expect(negotiation.items.every((item) => item.inNegotiation && item.marketValue == null)).toBe(true);
+    expect(negotiation.items.every((item) => item.inNegotiation)).toBe(true);
 
     const guestOwner = listMarketTickets(marketTicketCatalog, {
       ...guest,

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AccountAccessChoices } from "@/components/auth-links";
+import { useOpenAuthDialog } from "@/components/auth-dialog-context";
 import { CloseIcon } from "@/components/icons";
 import { useSession } from "@/components/session-provider";
 import { Button } from "@/components/ui/button";
+import { isAuthRoute } from "@/lib/auth";
 
 const GUEST_DESCRIPTION = "Entre na DESAFIOX para confirmar esta ação.";
 
@@ -45,9 +46,9 @@ export function GatedDialog({
 }) {
   const { open, closeDialog } = useGatedDialog(dialogId);
   const { signedIn } = useSession();
+  const openAuth = useOpenAuthDialog();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const [accessOpen, setAccessOpen] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -57,13 +58,11 @@ export function GatedDialog({
   }, [open]);
 
   useEffect(() => {
-    if (!open || signedIn) setAccessOpen(false);
-  }, [open, signedIn]);
-
-  useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      const current = new URL(window.location.href);
+      if (current.searchParams.get("acesso") === "1" || isAuthRoute(current.pathname)) return;
       event.preventDefault();
       closeDialog();
     }
@@ -82,7 +81,7 @@ export function GatedDialog({
     >
       <div className="flex items-start justify-between gap-4">
         <h2 id={titleId} className="text-xl font-black tracking-tight">
-          {accessOpen ? "Entrar ou criar conta" : title}
+          {title}
         </h2>
         <button
           type="button"
@@ -93,36 +92,16 @@ export function GatedDialog({
           <CloseIcon />
         </button>
       </div>
-      {accessOpen ? (
-        <>
-          <p className="mt-2 text-sm text-muted-foreground">Escolha como continuar na DESAFIOX.</p>
-          <AccountAccessChoices />
-          <button
-            type="button"
-            className="mt-6 text-sm font-semibold text-muted-foreground hover:text-foreground"
-            onClick={() => setAccessOpen(false)}
-          >
-            Voltar
-          </button>
-        </>
-      ) : signedIn ? (
-        children
-      ) : (
-        <>
-          <p className="mt-2 text-sm text-muted-foreground">{GUEST_DESCRIPTION}</p>
-        </>
-      )}
-      {accessOpen ? null : (
-        <div className="mt-6 flex justify-end">
-          {signedIn ? (
-            confirm
-          ) : (
-            <Button type="button" onClick={() => setAccessOpen(true)}>
-              Logar/Criar conta
-            </Button>
-          )}
-        </div>
-      )}
+      {signedIn ? children : <p className="mt-2 text-sm text-muted-foreground">{GUEST_DESCRIPTION}</p>}
+      <div className="mt-6 flex justify-end">
+        {signedIn ? (
+          confirm
+        ) : (
+          <Button type="button" onClick={openAuth}>
+            Logar/Criar conta
+          </Button>
+        )}
+      </div>
     </dialog>
   );
 }

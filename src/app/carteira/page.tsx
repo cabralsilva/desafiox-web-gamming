@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { RoutePlaceholder } from "@/components/route-placeholder";
+import { WalletHome } from "@/components/wallet-home";
 
 export const metadata: Metadata = {
   title: "Carteira",
+  description: "Saldo, extrato, depósito manual e saque na DESAFIOX.",
+  alternates: { canonical: "/carteira" },
 };
 
 export default function CarteiraPage() {
-  return <RoutePlaceholder title="Carteira" />;
+  return <WalletHome />;
 }

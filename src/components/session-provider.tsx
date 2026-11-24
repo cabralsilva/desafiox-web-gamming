@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { readBalanceAfter, sessionBalancePath } from "@/lib/queries/sessionBalance";
@@ -11,6 +11,7 @@ type SessionContextValue = {
   signedIn: boolean;
   balance: number | null;
   balanceStatus: "idle" | "loading" | "ready" | "unavailable";
+  reloadBalance: () => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -21,6 +22,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceStatus, setBalanceStatus] = useState<SessionContextValue["balanceStatus"]>("idle");
+  const [balanceTick, setBalanceTick] = useState(0);
+  const reloadBalance = useCallback(() => setBalanceTick((value) => value + 1), []);
 
   useEffect(() => {
     setToken(getAuthToken());
@@ -50,7 +53,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    setBalanceStatus("loading");
+    setBalanceStatus((current) => (current === "ready" ? current : "loading"));
     void apiRequest(sessionBalancePath(), { auth: true })
       .then(async (response) => {
         if (cancelled || response.status === 401) return;
@@ -69,15 +72,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, balanceTick]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
       signedIn: Boolean(token),
       balance,
       balanceStatus,
+      reloadBalance,
     }),
-    [token, balance, balanceStatus],
+    [token, balance, balanceStatus, reloadBalance],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

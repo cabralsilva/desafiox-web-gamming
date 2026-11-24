@@ -26,6 +26,8 @@ export type TicketTransferProposalResult = {
   offline: boolean;
 };
 
+export type TransferPaymentChoice = "credits" | "checkout";
+
 export type TransferProposalBlock = "requested" | "processing";
 
 export async function loadTicketTransferPreview(ticketId: string, fallback: TicketTransferPreview): Promise<TicketTransferPreview> {
@@ -42,18 +44,32 @@ export async function loadTicketTransferPreview(ticketId: string, fallback: Tick
   }
 }
 
-export async function createTicketTransferProposal(ticketId: string): Promise<TicketTransferProposalResult> {
+export function transferProposalBody(acceptedAt: string, paymentMethod?: TransferPaymentChoice) {
+  return {
+    acceptTermsOfChallenge: {
+      accepted: true,
+      acceptedAtDateTime: acceptedAt,
+      acceptedAppVersion: "web-1.0.0",
+    },
+    ...(paymentMethod ? { paymentMethod: paymentMethod === "credits" ? "WALLET" : "CHECKOUT" } : {}),
+  };
+}
+
+export function readPhoneVerified(payload: unknown): boolean | null {
+  const record = unwrapRecord(payload);
+  if (!record || typeof record.phoneVerified !== "boolean") return null;
+  return record.phoneVerified;
+}
+
+export async function createTicketTransferProposal(
+  ticketId: string,
+  paymentMethod?: TransferPaymentChoice,
+): Promise<TicketTransferProposalResult> {
   if (!process.env.NEXT_PUBLIC_API_URL) return { checkoutUrl: "", offline: true };
   const response = await apiRequest(`/ticket/${encodeURIComponent(ticketId)}/transfer-proposal`, {
     method: "POST",
     auth: true,
-    body: {
-      acceptTermsOfChallenge: {
-        accepted: true,
-        acceptedAtDateTime: new Date().toISOString(),
-        acceptedAppVersion: "web-1.0.0",
-      },
-    },
+    body: transferProposalBody(new Date().toISOString(), paymentMethod),
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

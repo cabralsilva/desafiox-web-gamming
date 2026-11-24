@@ -1,6 +1,7 @@
 export { ArrowDownIcon } from "@/components/icons/arrow-down";
 export { ArrowUpIcon } from "@/components/icons/arrow-up";
 export { ChevronLeftIcon } from "@/components/icons/chevron-left";
+export { ClockIcon } from "@/components/icons/clock";
 export { ChevronRightIcon } from "@/components/icons/chevron-right";
 export { ChevronsRightIcon } from "@/components/icons/chevrons-right";
 export { CloseIcon } from "@/components/icons/close";

@@ -1,4 +1,4 @@
-import type { IChallenge, IChampionship, ITicket } from "c2-desafiox";
+import type { ITicket, Modality } from "c2-desafiox";
 import type { ApiJson } from "./apiJson";
 
 type TicketJson = ApiJson<ITicket>;
@@ -6,35 +6,64 @@ type TicketJson = ApiJson<ITicket>;
 /**
  * Card do mercado. `inNegotiation` não existe no ticket: a API calcula
  * a partir de transferência `REQUESTED` ou `PROCESSING`.
- * Com negociação aberta a leitura pública omite `marketValue`.
+ * Com negociação aberta a API pode omitir `marketValue`; se o valor vier, o card mostra.
  */
 export interface IMarketTicketCard {
   _id: TicketJson["_id"];
   code: TicketJson["code"];
   saleAuthorized: TicketJson["saleAuthorized"];
+  points: number;
   marketValue?: { value: number };
   inNegotiation: boolean;
+  /** Apelido de quem propôs, quando há transferência REQUESTED ou PROCESSING. */
+  proposerNickName: string | null;
+  /** Instante em que a negociação aberta é cancelada. */
+  negotiationExpiresAt: string | null;
+  /** Percentual mockado. A API ainda não envia a chance de vencer. */
+  winProbability?: number;
+  accountId: string;
   account: { nickName: string };
-  challenge: Pick<
-    ApiJson<IChallenge>,
-    "name" | "slug" | "budgetAccumulated" | "roundCurrentIndex" | "roundEndIndex"
-  > & {
-    championship: Pick<ApiJson<IChampionship>, "name">;
+  challenge: {
+    name: string;
+    slug: string;
+    descriptionLong: string;
+    budgetAccumulated: number;
+    currentRoundIndex: number | null;
+    roundEndIndex: number | null;
+    championship: {
+      name: string;
+      modality: Modality | "";
+    };
   };
 }
 
-export const MARKET_TICKET_POPULATE = "account,challenge,challenge.championship";
+export const MARKET_TICKET_POPULATE = "challenge.championship,challenge.roundEnd,challenge.currentRound,account";
 
+export const MARKET_CHALLENGE_STATUS = "RUNNING,OPEN_TO_BUY_TICKETS";
+
+/** Campos pedidos na pesquisa pública, mais o id do dono e as regras do diálogo. */
 export const MARKET_TICKET_SELECT = [
   "code",
   "saleAuthorized",
-  "marketValue.value",
   "account.nickName",
+  "account._id",
+  "points",
   "challenge.name",
   "challenge.slug",
-  "challenge.budgetAccumulated",
-  "challenge.roundCurrentIndex",
-  "challenge.roundEndIndex",
+  "challenge.descriptionLong",
+  "challenge.currentRound",
+  "challenge.currentRound.globalRoundIndex",
   "challenge.championship.name",
-  "inNegotiation",
+  "challenge.championship.modality",
+  "challenge.roundEnd.globalRoundIndex",
+  "marketValue.value",
+  "challenge.budgetAccumulated",
 ].join(",");
+
+export type MarketTicketAction = "buy" | "propose" | "own" | "negotiating";
+
+export function marketTicketAction(ticket: IMarketTicketCard, accountId: string | null): MarketTicketAction {
+  if (ticket.inNegotiation) return "negotiating";
+  if (accountId && ticket.accountId && ticket.accountId === accountId) return "own";
+  return ticket.saleAuthorized ? "buy" : "propose";
+}

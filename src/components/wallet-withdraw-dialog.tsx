@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AuthLinks } from "@/components/auth-links";
+import { useSession } from "@/components/session-provider";
 import { WalletDialogFrame } from "@/components/wallet-dialog";
 import { Button } from "@/components/ui/button";
 import { accountIdFromToken } from "@/lib/jwt";
 import { getAuthToken } from "@/lib/session";
 import { formatMoneyBR } from "@/lib/money";
+import { presentMoney } from "@/lib/queries/sessionBalance";
 import {
   canConfirmWallet,
   createWithdraw,
@@ -36,6 +38,7 @@ export function WalletWithdrawDialog({
   onPixKeySaved: (pixKey: string) => void;
   onCreated: (movement: WalletMovement) => void;
 }) {
+  const { valuesVisible } = useSession();
   const [amount, setAmount] = useState("");
   const [draftKey, setDraftKey] = useState("");
   const [registering, setRegistering] = useState(false);
@@ -145,7 +148,7 @@ export function WalletWithdrawDialog({
             <ul className="list-disc space-y-1 pl-4">
               <li>O valor cai na conta da chave Pix em até 1 dia útil.</li>
               <li>O saque fica pendente até a operação da DESAFIOX concluir.</li>
-              <li>O valor não pode passar do saldo disponível{balance != null ? ` (${formatMoneyBR(balance)})` : ""}.</li>
+              <li>O valor não pode passar do saldo disponível{balance != null ? ` (${presentMoney(formatMoneyBR(balance), valuesVisible)})` : ""}.</li>
             </ul>
           </div>
           {signedIn && !accountReady ? <p className="text-muted-foreground">Carregando chave Pix…</p> : null}

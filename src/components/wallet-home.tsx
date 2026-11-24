@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, ClockIcon } from "@/components/icons";
+import { SessionBalanceValue, WalletValuesToggle } from "@/components/session-balance";
 import { useSession } from "@/components/session-provider";
 import { WalletDepositDialog } from "@/components/wallet-deposit-dialog";
 import { WalletWithdrawDialog } from "@/components/wallet-withdraw-dialog";
 import { Button } from "@/components/ui/button";
 import { accountIdFromToken } from "@/lib/jwt";
 import { formatMoneyBR } from "@/lib/money";
+import { presentMoney } from "@/lib/queries/sessionBalance";
 import { getAuthToken } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import {
   formatMovementDate,
-  latestCompletedBalance,
   loadWalletAccount,
   loadWalletStatement,
   movementStatusLabel,
@@ -26,6 +27,7 @@ type DialogName = "deposit" | "withdraw";
 
 export function WalletHome() {
   const { signedIn, balance, balanceStatus, reloadBalance } = useSession();
+  const sessionBalance = signedIn && balanceStatus === "ready" ? balance : null;
   const [dialog, setDialog] = useState<DialogName | null>(null);
   const [movements, setMovements] = useState<WalletMovement[]>([]);
   const [statementStatus, setStatementStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -97,10 +99,6 @@ export function WalletHome() {
     };
   }, [signedIn]);
 
-  const statementBalance = latestCompletedBalance(movements);
-  const shownBalance = !signedIn ? null : balanceStatus === "ready" && balance != null ? balance : statementBalance;
-  const balanceLoading = signedIn && shownBalance == null && (balanceStatus === "loading" || statementStatus === "loading");
-
   function created(movement: WalletMovement, message: string) {
     setMovements((current) => [movement, ...current.filter((item) => item.id !== movement.id)]);
     setNotice(message);
@@ -109,46 +107,48 @@ export function WalletHome() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-lg space-y-6">
+    <section>
       <h1 className="sr-only">Carteira</h1>
-      <article className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saldo disponível</p>
-        <p className="text-3xl font-black tabular-nums text-highlight">
-          {!signedIn ? "—" : balanceLoading ? "…" : shownBalance == null ? "Indisponível" : formatMoneyBR(shownBalance)}
-        </p>
-        {!signedIn ? <p className="text-sm text-muted-foreground">Entre para ver o saldo da sua carteira na DESAFIOX.</p> : null}
-        <div className="flex gap-2">
-          <Button type="button" variant="accent" size="sm" className="flex-1" onClick={() => setDialog("deposit")}>
+      <div className="rounded-lg border border-border bg-card px-4 py-4">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saldo disponível</p>
+          <SessionBalanceValue />
+          <WalletValuesToggle />
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Button type="button" variant="accent" className="h-11" onClick={() => setDialog("deposit")}>
             Depositar
           </Button>
-          <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setDialog("withdraw")}>
+          <Button type="button" variant="outline" className="h-11" onClick={() => setDialog("withdraw")}>
             Sacar
           </Button>
         </div>
-      </article>
+      </div>
 
-      <div className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider">Extrato</h2>
-        <p className="text-xs text-muted-foreground">
-          Os movimentos mostram tipo, valor, status e data. Só os concluídos alteram o saldo.
-        </p>
+      <div className="mt-6">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wider">Extrato</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Os movimentos mostram tipo, valor, status e data. Só os concluídos alteram o saldo.
+          </p>
+        </div>
         {notice ? (
-          <p role="status" className="rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm">
+          <p role="status" className="mt-3 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm">
             {notice}
           </p>
         ) : null}
         {!signedIn ? (
-          <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            Entre para ver o seu extrato. Os movimentos de outras contas não aparecem aqui.
+          <p className="mt-3 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            Entre para ver o saldo e o extrato da sua carteira na DESAFIOX.
           </p>
         ) : statementStatus === "loading" ? (
-          <p className="text-sm text-muted-foreground">Carregando extrato…</p>
+          <p className="mt-3 text-sm text-muted-foreground">Carregando extrato…</p>
         ) : statementStatus === "error" ? (
-          <p className="text-sm text-primary">{statementError}</p>
+          <p className="mt-3 text-sm text-primary">{statementError}</p>
         ) : movements.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma movimentação encontrada.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Nenhuma movimentação encontrada.</p>
         ) : (
-          <ul>
+          <ul className="mt-3">
             {movements.map((movement) => (
               <MovementRow key={movement.id} movement={movement} />
             ))}
@@ -169,7 +169,7 @@ export function WalletHome() {
         <WalletWithdrawDialog
           signedIn={signedIn}
           phoneVerified={phoneVerified}
-          balance={shownBalance}
+          balance={sessionBalance}
           pixKey={pixKey}
           accountReady={accountReady}
           onClose={() => setDialog(null)}
@@ -182,9 +182,11 @@ export function WalletHome() {
 }
 
 function MovementRow({ movement }: { movement: WalletMovement }) {
+  const { valuesVisible } = useSession();
   const type = movementTypeView(movement.typeMovement);
   const cancelled = movement.status === "CANCELLED";
   const sign = type.incoming ? "+" : "−";
+  const amount = presentMoney(`${sign}${formatMoneyBR(Math.abs(movement.valueMovemented))}`, valuesVisible);
 
   return (
     <li className="flex items-center gap-3 border-b border-border py-3 last:border-0">
@@ -202,8 +204,7 @@ function MovementRow({ movement }: { movement: WalletMovement }) {
         </div>
       </div>
       <span className={cn("shrink-0 text-sm font-bold tabular-nums", cancelled ? "text-muted-foreground line-through" : type.incoming ? "text-success" : "text-foreground")}>
-        {sign}
-        {formatMoneyBR(Math.abs(movement.valueMovemented))}
+        {amount}
       </span>
     </li>
   );

@@ -1,5 +1,24 @@
+import { formatMoneyBR } from "@/lib/money";
+
 /** Saldo da sessão: última movimentação COMPLETED. Não há relação para populate. */
 export const SESSION_BALANCE_SELECT = "balanceAfter";
+
+export const CONCEALED_MONEY = "R$ •••••";
+
+export type SessionBalanceStatus = "idle" | "loading" | "ready" | "unavailable";
+
+/** Texto único do saldo global. O topo e a carteira usam este valor. */
+export function sessionBalanceText(signedIn: boolean, status: SessionBalanceStatus, balance: number | null, visible = true) {
+  if (!signedIn) return "—";
+  if (status === "idle" || status === "loading") return "…";
+  if (!visible) return CONCEALED_MONEY;
+  if (balance == null) return "—";
+  return formatMoneyBR(balance);
+}
+
+export function presentMoney(formatted: string, visible: boolean) {
+  return visible ? formatted : CONCEALED_MONEY;
+}
 
 export function sessionBalancePath() {
   const params = new URLSearchParams({

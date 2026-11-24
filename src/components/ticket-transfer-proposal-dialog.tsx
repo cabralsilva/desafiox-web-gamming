@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/api";
 import { accountIdFromToken } from "@/lib/jwt";
 import { formatMoneyBR } from "@/lib/money";
+import { presentMoney } from "@/lib/queries/sessionBalance";
 import { getAuthToken } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import {
@@ -55,7 +56,7 @@ export function TicketTransferProposalDialog({
   onOpenChange: (open: boolean) => void;
   onRecorded: (outcome: TransferProposalBlock, checkoutUrl: string) => void;
 }) {
-  const { balance, balanceStatus } = useSession();
+  const { balance, balanceStatus, valuesVisible } = useSession();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const submittingRef = useRef(false);
   const titleId = useId();
@@ -286,7 +287,7 @@ export function TicketTransferProposalDialog({
                       />
                       <PaymentOption
                         title="Saldo da carteira"
-                        detail={balanceStatus === "ready" && balance != null ? formatMoneyBR(balance) : "Saldo da sessão"}
+                        detail={balanceStatus === "ready" && balance != null ? presentMoney(formatMoneyBR(balance), valuesVisible) : "Saldo da sessão"}
                         selected={method === "credits"}
                         onSelect={() => setMethod("credits")}
                       />

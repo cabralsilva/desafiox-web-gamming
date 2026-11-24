@@ -8,7 +8,7 @@ import { useSession } from "@/components/session-provider";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
 import { orderedBannerSlides } from "@/lib/banner";
-import { formatMoneyBR } from "@/lib/money";
+import { SessionBalanceValue, WalletValuesToggle } from "@/components/session-balance";
 import { isSectionShell } from "@/lib/section-shell";
 import { cn } from "@/lib/utils";
 import { bannerSlides } from "@/mocks/banner";
@@ -67,18 +67,18 @@ function SectionShell({ slides }: { slides: ReturnType<typeof orderedBannerSlide
 
 function HeaderSession({ className }: { className?: string }) {
   const pathname = usePathname();
-  const { signedIn, balance, balanceStatus } = useSession();
+  const { signedIn } = useSession();
   const accountCurrent = pathname === "/conta" || pathname.startsWith("/conta/");
-  const balanceLabel =
-    balanceStatus === "loading" ? "Saldo…" : balanceStatus === "ready" && balance != null ? formatMoneyBR(balance) : "Saldo";
 
   if (!signedIn) return <AuthLinks className={className} />;
 
   return (
-    <div className={cn("flex shrink-0 items-center gap-3", className)}>
-      <Link href="/carteira" className="whitespace-nowrap text-sm font-semibold tabular-nums text-highlight hover:underline">
-        {balanceLabel}
+    <div className={cn("flex shrink-0 items-center gap-2", className)}>
+      <Link href="/carteira" className="inline-flex items-baseline gap-1.5 whitespace-nowrap hover:underline" title="Ver carteira">
+        <span className="text-xs font-medium text-foreground">Saldo</span>
+        <SessionBalanceValue />
       </Link>
+      <WalletValuesToggle />
       <Button asChild size="sm" variant="outline" aria-current={accountCurrent ? "page" : undefined}>
         <Link href="/conta" className={cn(accountCurrent && "ring-2 ring-ring ring-offset-2 ring-offset-background")}>
           Conta

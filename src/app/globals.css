@@ -81,3 +81,19 @@
 .dx-from-left {
   transform: translateX(-100%);
 }
+
+/* dialog:modal já centraliza com inset 0 e margin auto. height fit-content evita esticar até o max-height. */
+dialog.auth-dialog {
+  height: fit-content;
+  max-height: min(90dvh, 720px);
+  width: min(28rem, calc(100vw - 1.5rem));
+}
+
+@media (max-width: 767px) {
+  dialog.auth-dialog {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+}

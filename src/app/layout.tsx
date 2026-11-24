@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Gantari } from "next/font/google";
+import { AuthDialogHost } from "@/components/auth-dialog";
 import { SectionContent } from "@/components/section-content";
 import { SessionProvider } from "@/components/session-provider";
 import { SiteFooter } from "@/components/site-footer";
@@ -33,11 +34,13 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="pt-BR" className={gantari.variable}>
       <body className="flex min-h-dvh flex-col font-body">
         <SessionProvider>
-          <SiteHeader />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-            <SectionContent>{children}</SectionContent>
-          </main>
-          <SiteFooter />
+          <AuthDialogHost>
+            <SiteHeader />
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+              <SectionContent>{children}</SectionContent>
+            </main>
+            <SiteFooter />
+          </AuthDialogHost>
         </SessionProvider>
       </body>
     </html>

@@ -5,6 +5,7 @@ export type ApiRequestOptions = {
   auth?: boolean;
   body?: unknown;
   signal?: AbortSignal;
+  headers?: HeadersInit;
 };
 
 export type ApiClientDeps = {
@@ -18,12 +19,12 @@ export function createApiClient(deps: ApiClientDeps) {
   const baseUrl = deps.baseUrl.replace(/\/$/, "");
 
   return async function request(path: string, options: ApiRequestOptions = {}) {
-    const headers = new Headers();
+    const headers = new Headers(options.headers);
     headers.set("Accept", "application/json");
-    if (options.body !== undefined) {
+    if (options.body !== undefined && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
-    if (options.auth) {
+    if (options.auth && !headers.has("Authorization")) {
       const token = deps.getToken();
       if (token) headers.set("Authorization", `Bearer ${token}`);
     }

@@ -1,12 +1,17 @@
-import type { ISignInRequest } from "../types";
+import type { IPhoneSignInConfirm, IPhoneSignInRequest, ISignInRequest } from "../types";
 
-/** API-06. O endpoint atual só autentica e-mail; o telefone único ainda não entra. */
+/** Entrada por e-mail e senha. */
 export const signInByEmail: ISignInRequest = {
   email: "jogador@exemplo.com",
   password: "senha-exemplo",
 };
 
-export const signInByPhone: ISignInRequest = {
-  phone: "5511999990000",
-  password: "senha-exemplo",
+/** OTP de WhatsApp. O número de exemplo segue o contrato sem DDI. */
+export const signInByPhone: IPhoneSignInRequest = {
+  phone: "11999990000",
+};
+
+export const signInByPhoneConfirm: IPhoneSignInConfirm = {
+  phone: signInByPhone.phone,
+  code: "000000",
 };

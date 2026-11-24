@@ -8,4 +8,4 @@ export { MARKET_TICKET_POPULATE, MARKET_TICKET_SELECT } from "./marketTicket";
 export type { IEvolutionGuess, IEvolutionRound, IEvolutionTransfer, IPublicEvolution } from "./evolution";
 export type { IBannerSlide } from "./banner";
 export type { IWhatsAppCodeConfirm, IWhatsAppCodeRequest, IWhatsAppVerification } from "./whatsappVerification";
-export type { ISignInRequest } from "./signIn";
+export type { IGoogleSignupProfile, IPhoneSignInConfirm, IPhoneSignInRequest, ISignInRequest } from "./signIn";

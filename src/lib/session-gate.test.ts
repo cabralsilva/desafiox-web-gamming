@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createApiClient } from "@/lib/api";
 import { publicChallengePath } from "@/lib/queries/publicChallenges";
-import { readBalanceAfter, sessionBalancePath } from "@/lib/queries/sessionBalance";
+import { readBalanceAfter, sessionBalancePath, sessionBalanceText } from "@/lib/queries/sessionBalance";
 import { consumeReturnIntent, saveReturnIntent } from "@/lib/returnIntent";
 import { deleteToken, readToken, writeToken } from "@/lib/session";
 import { PUBLIC_CHALLENGE_POPULATE, PUBLIC_CHALLENGE_SELECT } from "@/types/publicChallenge";
@@ -111,5 +111,15 @@ describe("saldo", () => {
     const params = new URL(`http://api.test${sessionBalancePath()}`).searchParams;
     expect(params.get("select")).toBe("balanceAfter");
     expect(readBalanceAfter({ items: [{ balanceAfter: 42.5 }] })).toBe(42.5);
+  });
+
+  it("formata o mesmo texto para o topo e a carteira", () => {
+    expect(sessionBalanceText(true, "ready", 120)).toBe(sessionBalanceText(true, "ready", 120));
+    expect(sessionBalanceText(true, "ready", 120)).toContain("120,00");
+    expect(sessionBalanceText(false, "ready", 120)).toBe("—");
+    expect(sessionBalanceText(true, "loading", null)).toBe("…");
+    expect(sessionBalanceText(true, "unavailable", null)).toBe("—");
+    expect(sessionBalanceText(true, "ready", 120, false)).toBe("R$ •••••");
+    expect(sessionBalanceText(true, "ready", 120, false)).toBe(sessionBalanceText(true, "ready", 10, false));
   });
 });

@@ -1,16 +1,23 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { readBalanceAfter, sessionBalancePath } from "@/lib/queries/sessionBalance";
 import { consumeReturnIntent } from "@/lib/returnIntent";
 import { getAuthToken, subscribeSession } from "@/lib/session";
+import { latestCompletedBalance } from "@/lib/wallet";
+import { walletMovementCatalog } from "@/mocks/wallet";
+
+const VALUES_VISIBLE_KEY = "desafiox_wallet_values_visible";
 
 type SessionContextValue = {
   signedIn: boolean;
   balance: number | null;
   balanceStatus: "idle" | "loading" | "ready" | "unavailable";
+  reloadBalance: () => void;
+  valuesVisible: boolean;
+  toggleValuesVisible: () => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -21,6 +28,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceStatus, setBalanceStatus] = useState<SessionContextValue["balanceStatus"]>("idle");
+  const [balanceTick, setBalanceTick] = useState(0);
+  const [valuesVisible, setValuesVisible] = useState(true);
+  const reloadBalance = useCallback(() => setBalanceTick((value) => value + 1), []);
+  const toggleValuesVisible = useCallback(() => {
+    setValuesVisible((current) => {
+      const next = !current;
+      window.localStorage.setItem(VALUES_VISIBLE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    setValuesVisible(window.localStorage.getItem(VALUES_VISIBLE_KEY) !== "0");
+  }, []);
 
   useEffect(() => {
     setToken(getAuthToken());
@@ -44,13 +65,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (!process.env.NEXT_PUBLIC_API_URL) {
-      setBalance(null);
-      setBalanceStatus("unavailable");
+      setBalance(latestCompletedBalance(walletMovementCatalog));
+      setBalanceStatus("ready");
       return;
     }
 
     let cancelled = false;
-    setBalanceStatus("loading");
+    setBalanceStatus((current) => (current === "ready" ? current : "loading"));
     void apiRequest(sessionBalancePath(), { auth: true })
       .then(async (response) => {
         if (cancelled || response.status === 401) return;
@@ -69,15 +90,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, balanceTick]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
       signedIn: Boolean(token),
       balance,
       balanceStatus,
+      reloadBalance,
+      valuesVisible,
+      toggleValuesVisible,
     }),
-    [token, balance, balanceStatus],
+    [token, balance, balanceStatus, reloadBalance, valuesVisible, toggleValuesVisible],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

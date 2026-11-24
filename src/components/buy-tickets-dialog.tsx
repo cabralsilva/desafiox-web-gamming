@@ -11,7 +11,7 @@ import { apiRequest } from "@/lib/api";
 import { isCurrentPricingWindow } from "@/lib/dates";
 import { accountIdFromToken } from "@/lib/jwt";
 import { formatMoneyBR } from "@/lib/money";
-import { readBalanceAfter, sessionBalancePath } from "@/lib/queries/sessionBalance";
+import { presentMoney, readBalanceAfter, sessionBalancePath } from "@/lib/queries/sessionBalance";
 import {
   canConfirmPurchase,
   createSubmitGuard,
@@ -37,7 +37,7 @@ export function BuyTicketsDialog({
   onOpenChange: (open: boolean) => void;
   pendingOrderId?: string | null;
 }) {
-  const { signedIn, balance, balanceStatus } = useSession();
+  const { signedIn, balance, balanceStatus, valuesVisible } = useSession();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const guardRef = useRef(createSubmitGuard());
   const titleId = useId();
@@ -249,7 +249,7 @@ export function BuyTicketsDialog({
               />
               <PaymentOption
                 title="Saldo da carteira"
-                detail={walletBalance == null ? "Saldo da sessão" : formatMoneyBR(walletBalance)}
+                detail={walletBalance == null ? "Saldo da sessão" : presentMoney(formatMoneyBR(walletBalance), valuesVisible)}
                 selected={method === "credits"}
                 onSelect={() => setMethod("credits")}
               />
